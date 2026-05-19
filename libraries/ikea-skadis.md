@@ -41,20 +41,24 @@ grids offset by 20 mm, slots 5 × 15 mm).
 | `SKADIS_PANEL_TOL`  | 0.2 mm  | Tab overshoots panel by this much |
 | `SKADIS_DROP`       | 10.0 mm | Lock travel (= slot_h − tab_h) |
 | `SKADIS_TAB_H`      | 5.0 mm  | Tab Z height |
-| `SKADIS_RETAINER_H` | 12.5 mm | Back retainer Z height |
+| `SKADIS_RETAINER_H` | 11.5 mm | Back retainer Z height |
 | `SKADIS_RETAINER_D` | 3.0 mm  | Back retainer Y depth |
+| `SKADIS_RETAINER_TOP_CHAMFER` | 0.3 mm | 45° chamfer on the retainer's top-front L-bend edge |
 | `SKADIS_STANDOFF_W` | 10.0 mm | Standoff block X width |
 | `SKADIS_STANDOFF_H` | 15.0 mm | Standoff block Z height |
 
 Any of these can be overridden per call on `skadis_peg` / `skadis_peg_grid` /
 `skadis_pegs_at` (`slot_w`, `slot_h`, `panel_t`, `panel_tol`, `tab_h`, `ret_h`,
-`ret_d`, `standoff_w`, `standoff_h`) — `undef` uses the library default.
+`ret_d`, `top_chamfer`, `standoff_w`, `standoff_h`) — `undef` uses the
+library default.
 
 ## Lock mechanism
 
-5 mm tab + 12.5 mm back retainer behind the panel. Insert with the tab at the
-slot top, drop 10 mm — the retainer's 7.5 mm tail then sits behind solid
+5 mm tab + 11.5 mm back retainer behind the panel. Insert with the tab at the
+slot top, drop 10 mm — the retainer's 6.5 mm tail then sits behind solid
 panel below the slot, locked by gravity. To remove, lift 10 mm and pull.
+The retainer's top-front L-bend edge is chamfered 0.3 mm so the corner
+behind the panel doesn't catch as the peg drops into the lock.
 
 ## Preview
 
