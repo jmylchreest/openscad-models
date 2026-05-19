@@ -1,0 +1,30 @@
+[submodule "libraries/BOSL2"]
+	path = libraries/BOSL2
+	url = https://github.com/BelfrySCAD/BOSL2.git
+[submodule "libraries/LEGO.scad"]
+	path = libraries/LEGO.scad
+	url = https://github.com/cfinke/LEGO.scad.git
+[submodule "libraries/NopSCADlib"]
+	path = libraries/NopSCADlib
+	url = https://github.com/nophead/NopSCADlib.git
+[submodule "libraries/openscad-ldraw"]
+	path = libraries/openscad-ldraw
+	url = https://github.com/schiele/openscad-ldraw.git
+[submodule "libraries/Round-Anything"]
+	path = libraries/Round-Anything
+	url = https://github.com/Irev-Dev/Round-Anything.git
+[submodule "libraries/scad-utils"]
+	path = libraries/scad-utils
+	url = https://github.com/OskarLinde/scad-utils.git
+[submodule "libraries/Technic.scad"]
+	path = libraries/Technic.scad
+	url = https://github.com/cfinke/Technic.scad.git
+[submodule "libraries/gridfinity-rebuilt-openscad"]
+	path = libraries/gridfinity-rebuilt-openscad
+	url = https://github.com/kennetek/gridfinity-rebuilt-openscad.git
+[submodule "libraries/threadlib"]
+	path = libraries/threadlib
+	url = https://github.com/adrianschlatter/threadlib.git
+[submodule "libraries/The-Boardgame-Insert-Toolkit"]
+	path = libraries/The-Boardgame-Insert-Toolkit
+	url = https://github.com/dppdppd/The-Boardgame-Insert-Toolkit.git
