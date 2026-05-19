@@ -85,7 +85,8 @@ module skadis_peg(
     tol_h            = 0,
     standoff_top_ext = 0,
     standoff_bot_ext = 0,
-    top_chamfer = undef,
+    top_chamfer   = undef,
+    top_chamfer_h = undef,
     slot_w     = undef, slot_h     = undef,
     panel_t    = undef, panel_tol  = undef,
     tab_h      = undef,
@@ -102,6 +103,11 @@ module skadis_peg(
     _standoff_w = standoff_w == undef ? SKADIS_STANDOFF_W : standoff_w;
     _standoff_h = standoff_h == undef ? SKADIS_STANDOFF_H : standoff_h;
     _top_chamfer = top_chamfer == undef ? SKADIS_RETAINER_TOP_CHAMFER : top_chamfer;
+    // Default chamfer height = tab_h, which equals the portion of the
+    // retainer that sits inside the slot opening when locked. That lands
+    // the chamfer-to-full-size transition exactly at the slot bottom
+    // edge, where it's hidden by the panel material below the slot.
+    _top_chamfer_h = top_chamfer_h == undef ? _tab_h : top_chamfer_h;
 
     _tab_w     = _slot_w - tol_w;
     _ret_w     = _tab_w;
@@ -130,26 +136,39 @@ module skadis_peg(
             }
         }
 
-        translate([-_tab_w / 2, 0, _tab_z0])
-            cube([_tab_w, _eff_pan_t, _tab_h]);
+        // In-slot horizontal shelf: tab + top of retainer fused into one
+        // block that slides through the slot. The three "leading" top
+        // edges (back, left, right) are chamfered at a constant slope
+        // spanning the whole in-slot height so the chamfer-to-full
+        // transition lands at the slot bottom edge (hidden by the panel
+        // below). The top-FRONT edge stays sharp so the tab's front face
+        // remains flush in the slot.
+        _slot_bottom = _tab_z0;
+        _in_slot_y_max = _eff_pan_t + _ret_d;
+        _full_h = max(0, _tab_h - _top_chamfer_h);
 
-        // Retainer. The four top edges (all the L-bend corners sitting at
-        // the top behind the panel) get a small 45° chamfer so they don't
-        // catch as the peg slides into the slot or drops into the lock.
-        if (_top_chamfer > 0)
+        if (_full_h > 0)
+            translate([-_ret_w / 2, 0, _slot_bottom])
+                cube([_ret_w, _in_slot_y_max, _full_h]);
+
+        if (_top_chamfer > 0 && _top_chamfer_h > 0)
             hull() {
-                translate([-_ret_w / 2, _eff_pan_t, _ret_z0])
-                    cube([_ret_w, _ret_d, _eff_ret_h - _top_chamfer]);
-                translate([-_ret_w / 2 + _top_chamfer,
-                           _eff_pan_t + _top_chamfer,
-                           _ret_z0 + _eff_ret_h])
+                translate([-_ret_w / 2, 0, _slot_bottom + _full_h])
+                    cube([_ret_w, _in_slot_y_max, 0.001]);
+                translate([-_ret_w / 2 + _top_chamfer, 0, _tab_z1])
                     cube([_ret_w - 2 * _top_chamfer,
-                          _ret_d  - 2 * _top_chamfer,
+                          _in_slot_y_max - _top_chamfer,
                           0.001]);
             }
-        else
+        else if (_top_chamfer_h > 0)
+            translate([-_ret_w / 2, 0, _slot_bottom + _full_h])
+                cube([_ret_w, _in_slot_y_max, _top_chamfer_h]);
+
+        // Retainer tail: the part below the slot bottom that hangs behind
+        // solid panel material and locks the peg in place. Plain block.
+        if (_eff_ret_h - _tab_h > 0)
             translate([-_ret_w / 2, _eff_pan_t, _ret_z0])
-                cube([_ret_w, _ret_d, _eff_ret_h]);
+                cube([_ret_w, _ret_d, _eff_ret_h - _tab_h]);
 
         // Friction bump on the front of the tab — resists accidental lift-out.
         if (retainer)
@@ -191,6 +210,7 @@ module skadis_peg_grid(
     tol_w            = 0.4,
     tol_h            = 0,
     top_chamfer      = undef,
+    top_chamfer_h    = undef,
     // Mechanical overrides — forwarded to skadis_peg (undef = library default):
     slot_w = undef, slot_h = undef,
     panel_t = undef, panel_tol = undef,
@@ -214,6 +234,7 @@ module skadis_peg_grid(
                                standoff_top_ext = standoff_top_ext,
                                standoff_bot_ext = standoff_bot_ext,
                                top_chamfer = top_chamfer,
+                               top_chamfer_h = top_chamfer_h,
                                slot_w = slot_w, slot_h = slot_h,
                                panel_t = panel_t, panel_tol = panel_tol,
                                tab_h = tab_h, ret_h = ret_h, ret_d = ret_d,
@@ -239,6 +260,7 @@ module skadis_pegs_at(
     tol_w            = 0.4,
     tol_h            = 0,
     top_chamfer      = undef,
+    top_chamfer_h    = undef,
     // Mechanical overrides — forwarded to skadis_peg (undef = library default):
     slot_w = undef, slot_h = undef,
     panel_t = undef, panel_tol = undef,
@@ -258,6 +280,7 @@ module skadis_pegs_at(
                        standoff_top_ext = standoff_top_ext,
                        standoff_bot_ext = standoff_bot_ext,
                        top_chamfer = top_chamfer,
+                       top_chamfer_h = top_chamfer_h,
                        slot_w = slot_w, slot_h = slot_h,
                        panel_t = panel_t, panel_tol = panel_tol,
                        tab_h = tab_h, ret_h = ret_h, ret_d = ret_d,

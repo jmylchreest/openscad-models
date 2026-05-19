@@ -43,7 +43,7 @@ grids offset by 20 mm, slots 5 × 15 mm).
 | `SKADIS_TAB_H`      | 5.0 mm  | Tab Z height |
 | `SKADIS_RETAINER_H` | 11.5 mm | Back retainer Z height |
 | `SKADIS_RETAINER_D` | 3.0 mm  | Back retainer Y depth |
-| `SKADIS_RETAINER_TOP_CHAMFER` | 0.3 mm | 45° chamfer on the retainer's top-front L-bend edge |
+| `SKADIS_RETAINER_TOP_CHAMFER` | 0.3 mm | Inset on the three "leading" top edges (back/left/right) of the in-slot horizontal shelf |
 | `SKADIS_STANDOFF_W` | 10.0 mm | Standoff block X width |
 | `SKADIS_STANDOFF_H` | 15.0 mm | Standoff block Z height |
 
@@ -54,11 +54,14 @@ library default.
 
 ## Lock mechanism
 
-5 mm tab + 11.5 mm back retainer behind the panel. Insert with the tab at the
-slot top, drop 10 mm — the retainer's 6.5 mm tail then sits behind solid
-panel below the slot, locked by gravity. To remove, lift 10 mm and pull.
-The retainer's top-front L-bend edge is chamfered 0.3 mm so the corner
-behind the panel doesn't catch as the peg drops into the lock.
+5 mm horizontal shelf through the slot + a 6.5 mm tail behind the panel
+below the slot. Insert with the shelf at the slot top, drop 10 mm — the
+tail then sits behind solid panel below the slot, locked by gravity. To
+remove, lift 10 mm and pull. The shelf's three "leading" top edges (back,
+left, right) are sloped inward by 0.3 mm over the full in-slot height so
+the chamfer-to-full-size transition lands exactly at the slot bottom
+(hidden by the panel) — easier insertion, no blocky step. The top-front
+edge stays sharp so the front face remains flush in the slot.
 
 ## Preview
 
