@@ -19,25 +19,28 @@ clip_wall_t     = 2.5;
 clip_top_r      = 2.0;
 clip_arm_extend = 32;   // ≥ CLIP_DOVETAIL_L + 2 mm so the slot fits
 
-/* [Holder — slim back plate carrying the male connector] */
-// The plate is just a slim "spine" — wide enough for the cup at the
-// bottom + the dovetail rail behind. Total height covers the rail at
-// the top + the cup at the bottom.
-plate_w     = 38;   // X width (slightly wider than the cup outer width)
-plate_h     = 48;   // Z height — top region carries the rail, bottom region carries the cup
-plate_t     = 3.0;  // Y thickness behind the rail (default library minimum)
-plate_r     = 4;    // plate outer corner radius (cosmetic)
+/* [Spine — narrow back panel that carries the male connector] */
+// Just wide enough to mount the dovetail rail + a small margin. The
+// remote leans against this spine (only the centre of its back makes
+// contact); the cradle at the bottom catches the remote's feet and
+// the arms hold it forward.
+spine_w     = 20;    // X width of the spine (near dovetail base width)
+spine_h     = 50;    // Z height — top carries the rail, bottom meets the cradle
+spine_t     = 3.0;   // Y thickness behind the rail
+spine_r     = 2;     // spine outer corner radius (cosmetic)
 
-/* [Cup — small cradle at the bottom that catches the remote] */
-remote_w        = 34.0;
-remote_d        = 7.5;
-cup_clear_w     = 0.6;  // total X clearance for the remote in the cup
-cup_clear_d     = 0.4;  // total Y clearance for the remote
-cup_side_t      = 2.0;  // X thickness of each cup side wall
-cup_front_t     = 2.0;  // Y thickness of the cup front wall
-cup_floor_t     = 2.5;  // floor thickness (solid bottom)
-cup_h           = 12;   // total cup height (floor + walls)
-cup_corner_r    = 3.0;  // rounding on the cup's outer corners
+/* [Cradle — small bottom tray + arms that clip the remote] */
+// Floor catches the remote's bottom edge; thin side and front arms
+// rise from the floor and clip around the remote's lower body to keep
+// it from falling forward. Light remote = minimal material.
+remote_w         = 34.0;
+remote_d         = 7.5;
+cradle_clear_w   = 0.6;  // total X clearance for the remote in the cradle
+cradle_clear_d   = 0.4;  // total Y clearance for the remote
+floor_t          = 2.0;  // floor thickness (solid bottom — stops the remote falling through)
+arm_t            = 1.6;  // thickness of each arm (Y for side arms, X for the front arm)
+arm_h            = 9.0;  // arms rise this far above the floor
+front_arm_w      = 8.0;  // X width of each front arm (a gap in the middle for thumb access)
 
 /* [Quality] */
 $fa = $preview ? $fa : 1;
@@ -48,47 +51,52 @@ $fn = 64;
 all_spacing = 25;
 
 // ---- derived ----
-cup_inner_w = remote_w + cup_clear_w;             // X interior of the cup
-cup_inner_d = remote_d + cup_clear_d;             // Y interior of the cup
-cup_outer_w = cup_inner_w + 2 * cup_side_t;       // X exterior
-cup_outer_d = cup_inner_d + cup_front_t;          // Y exterior (back is shared with plate)
+cradle_inner_w = remote_w + cradle_clear_w;     // X gap inside the cradle for the remote
+cradle_inner_d = remote_d + cradle_clear_d;     // Y depth inside the cradle for the remote
+cradle_outer_w = cradle_inner_w + 2 * arm_t;    // total cradle X span (with side arms)
+cradle_outer_d = cradle_inner_d + arm_t;        // total cradle Y depth (front arm)
 
 // ---- modules ----
 
-// 2D rounded rectangle with the back-left corner at (0,0), front in +Y.
-module _rrect2d_corner(w, d, r) {
-    rr = min(r, min(w, d) / 2 - 0.001);
-    offset(r = rr) offset(r = -rr)
-        translate([rr, rr]) square([w - 2 * rr, d - 2 * rr]);
+// Minimal cradle: a thin floor with three skinny arms rising from it —
+// one on each side and one (or two) at the front — that clip around
+// the lower body of the remote. The back of the remote rests against
+// the spine. Material is kept thin throughout.
+//
+// Origin: cradle centred along X, back at Y=0 (against the spine's
+// front face), floor's bottom at Z=0.
+module cradle() {
+    // Floor (full cradle footprint, thin).
+    translate([-cradle_outer_w / 2, 0, 0])
+        cube([cradle_outer_w, cradle_outer_d, floor_t]);
+
+    // Left side arm.
+    translate([-cradle_outer_w / 2, 0, floor_t])
+        cube([arm_t, cradle_outer_d, arm_h]);
+
+    // Right side arm.
+    translate([cradle_outer_w / 2 - arm_t, 0, floor_t])
+        cube([arm_t, cradle_outer_d, arm_h]);
+
+    // Two front arms with a thumb gap in the middle — they clip the
+    // remote's front face so it can't tip forward.
+    // Left front arm.
+    translate([-cradle_inner_w / 2, cradle_inner_d, floor_t])
+        cube([front_arm_w, arm_t, arm_h]);
+    // Right front arm.
+    translate([cradle_inner_w / 2 - front_arm_w, cradle_inner_d, floor_t])
+        cube([front_arm_w, arm_t, arm_h]);
 }
 
-// Small cup at the bottom of the plate. Outer footprint X width =
-// cup_outer_w, Y depth = cup_outer_d (back face shared with the plate's
-// +Y face at Y=0). Interior cavity (X = cup_inner_w, Y = cup_inner_d)
-// is open at the top; the back of the cavity is the plate itself.
-module cup() {
-    difference() {
-        // Outer cup body — extruded from a 2D rounded rectangle sitting
-        // on the +Y face of the plate (Y=0 to Y=cup_outer_d, X centred).
-        translate([-cup_outer_w / 2, 0, 0])
-            linear_extrude(height = cup_h)
-                _rrect2d_corner(cup_outer_w, cup_outer_d, cup_corner_r);
-
-        // Interior cavity for the remote — open at the top, back at Y=0
-        // (against the plate's front face).
-        translate([-cup_inner_w / 2, -0.01, cup_floor_t])
-            cube([cup_inner_w, cup_inner_d + 0.01, cup_h - cup_floor_t + 1]);
-    }
-}
-
-// Full holder = slim back plate (male rail on its back) + cup at the bottom.
+// Full holder = narrow spine carrying the male connector + minimal
+// cradle at the bottom that clips the remote.
 module remote_holder() {
     union() {
-        modular_holder_back(width    = plate_w,
-                            height   = plate_h,
-                            wall_t   = plate_t,
-                            corner_r = plate_r);
-        cup();
+        modular_holder_back(width    = spine_w,
+                            height   = spine_h,
+                            wall_t   = spine_t,
+                            corner_r = spine_r);
+        cradle();
     }
 }
 
@@ -106,6 +114,6 @@ if (render_target == "clip") {
             clip(grip_d = clip_grip_d, grip_h = clip_grip_h,
                  width = clip_width, wall_t = clip_wall_t,
                  top_r = clip_top_r, arm_extend = clip_arm_extend);
-    translate([all_spacing + plate_w / 2, 0, 0])
+    translate([all_spacing + cradle_outer_w / 2, 0, 0])
         remote_holder();
 }
