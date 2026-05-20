@@ -12,7 +12,7 @@ use <../../libraries/modular-clip/modular-clip.scad>
 render_target = "all";  // [clip, holder, all]
 
 /* [Clip — grips the edge] */
-clip_grip_d     = 2.55;
+clip_grip_d     = 2.3;
 clip_grip_h     = 25;
 clip_width      = 20;
 clip_wall_t     = 2.5;
@@ -33,8 +33,8 @@ spine_r     = 2;     // spine outer corner radius (cosmetic)
 // Floor catches the remote's bottom edge; thin side and front arms
 // rise from the floor and clip around the remote's lower body to keep
 // it from falling forward. Light remote = minimal material.
-remote_w         = 34.0;
-remote_d         = 7.5;
+remote_w         = 35.5;
+remote_d         = 11.5;
 cradle_clear_w   = 0.6;  // total X clearance for the remote in the cradle
 cradle_clear_d   = 0.4;  // total Y clearance for the remote
 floor_t          = 2.0;  // floor thickness (solid bottom — stops the remote falling through)
