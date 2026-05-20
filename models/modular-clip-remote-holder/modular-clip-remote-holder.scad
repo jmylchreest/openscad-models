@@ -1,6 +1,8 @@
-// modular-clip-remote-holder — parametric remote-control pocket that
-// snaps onto the modular-clip dovetail. Default sizing fits a 34 × 7.5 mm
-// remote. Author: John Mylchreest <jmylchreest@gmail.com>. MIT licensed.
+// modular-clip-remote-holder — simple cradle that holds a remote on the
+// modular-clip dovetail. Back plate carries the slot; a short bracket at
+// the bottom catches the remote so it stands upright with most of its
+// body free. Defaults sized for a 34 × 7.5 mm remote.
+// Author: John Mylchreest <jmylchreest@gmail.com>. MIT licensed.
 
 use <../../libraries/modular-clip/modular-clip.scad>
 
@@ -10,27 +12,31 @@ use <../../libraries/modular-clip/modular-clip.scad>
 render_target = "all";  // [clip, holder, all]
 
 /* [Clip — grips the edge] */
-clip_grip_d     = 5;    // edge thickness the clip grips (between arms)
-clip_grip_h     = 25;   // vertical extent of the grip region
-clip_width      = 30;   // clip width along the gripped edge
-clip_wall_t     = 2.5;  // plastic wall thickness
-clip_top_r      = 2.0;  // inner radius of the 180° top fold
-clip_arm_extend = 24;   // front-arm extension below the grip (carries the rail)
+clip_grip_d     = 5;
+clip_grip_h     = 25;
+clip_width      = 30;
+clip_wall_t     = 2.5;
+clip_top_r      = 2.0;
+clip_arm_extend = 24;
 
-/* [Holder — remote pocket] */
-// Defaults sized for a 34 × 7.5 mm remote.
-remote_w        = 34.0;   // remote long-axis (X)
-remote_d        = 7.5;    // remote short-axis (Y, depth front-to-back)
-holder_h        = 65;     // pocket height in Z (≤ remote height, leaves top exposed)
-pocket_clear_w  = 0.6;    // pocket is this much wider than the remote (per side)
-pocket_clear_d  = 0.3;    // pocket is this much deeper than the remote (per side)
-wall_t          = 2.0;    // side wall thickness
-back_wall_t     = 5.0;    // back wall — thicker so the dovetail slot fits in it
-floor_t         = 2.5;    // solid bottom floor — stops the remote falling through
-front_lip_w     = 9.0;    // X extent of each front retention lip
-front_lip_t     = 1.8;    // Y thickness of the front lip (overhangs the pocket front)
-front_lip_band  = 12;     // Z extent of the lip band at the top of the pocket
-corner_r        = 2.0;    // outer corner radius of the holder body
+/* [Holder back plate] */
+back_w     = 40;   // X width of the back plate
+back_h     = 60;   // Z height of the back plate (slot lives near the top)
+back_t     = 5;    // Y thickness — must be ≥ dovetail standoff + clearance
+back_r     = 3;    // outer corner radius on the back face (cosmetic)
+
+/* [Cradle — bottom bracket that holds the remote] */
+// Sized for a 34 × 7.5 mm remote. The remote leans against the back
+// plate, its bottom sits on the floor, side rims and a small front rim
+// keep it from shifting.
+remote_w        = 34.0;
+remote_d        = 7.5;
+cradle_clear_w  = 0.6;   // total X clearance for the remote in the cradle
+cradle_clear_d  = 0.4;   // total Y clearance for the remote
+floor_t         = 3.0;   // cradle floor thickness
+rim_h           = 6.0;   // cradle rim height (above the floor)
+side_rim_t      = 2.0;   // X thickness of each side rim
+front_rim_t     = 2.0;   // Y thickness of the front rim
 
 /* [Quality] */
 $fa = $preview ? $fa : 1;
@@ -41,12 +47,11 @@ $fn = 64;
 all_spacing = 25;
 
 // ---- derived ----
-pocket_w        = remote_w + 2 * pocket_clear_w;    // interior cavity X
-pocket_d        = remote_d + 2 * pocket_clear_d;    // interior cavity Y
-holder_outer_w  = pocket_w + 2 * wall_t;
-holder_outer_d  = back_wall_t + pocket_d + front_lip_t;
-pocket_front_y  = back_wall_t + pocket_d;           // Y of the pocket's front face
-front_gap       = pocket_w - 2 * front_lip_w;       // gap between the two front lips
+cradle_inner_w = remote_w + cradle_clear_w;
+cradle_inner_d = remote_d + cradle_clear_d;
+cradle_outer_w = cradle_inner_w + 2 * side_rim_t;
+cradle_outer_d = cradle_inner_d + front_rim_t;       // back side shares the back plate
+cradle_total_h = floor_t + rim_h;
 
 // ---- modules ----
 
@@ -56,96 +61,66 @@ module _rrect2d(w, d, r) {
     offset(r = rr) offset(r = -rr) square([w, d], center = true);
 }
 
-// Solid holder block: floor + back wall + 2 side walls + 2 front
-// retention lips at the top. Pocket cavity is pocket_w × pocket_d ×
-// (holder_h - floor_t), open at the top. Below the lip band the front
-// face is fully open; within the lip band only the middle gap is open
-// (the two lips retain the remote at the top-front). The back wall
-// carries a dovetail slot, open at the top, that mates with the clip's
-// rail.
-//
-// Frame: holder centred at X=0; back face at Y=0; floor at Z=0; top at
-// Z=holder_h.
-module remote_holder() {
-    difference() {
-        // Outer body — full block.
-        translate([0, holder_outer_d / 2, 0])
-            linear_extrude(height = holder_h)
-                _rrect2d(holder_outer_w, holder_outer_d, corner_r);
+// Cradle: a short L-bracket attached to the front face of the back plate.
+// Floor at Z in [0, floor_t]; side and front rims at Z in [floor_t,
+// floor_t + rim_h]. The back face of the cradle (-Y end) butts against
+// the back plate's front face at Y = back_t.
+module cradle() {
+    // Cradle outer footprint (X width = cradle_outer_w, Y depth =
+    // cradle_outer_d). Origin: cradle centred in X, back face at
+    // Y = back_t (front face of the back plate).
+    cx = 0;
+    y0 = back_t;
+    y1 = y0 + cradle_outer_d;
 
-        // Pocket cavity (open at top).
-        translate([0, back_wall_t + pocket_d / 2, floor_t])
-            linear_extrude(height = holder_h - floor_t + 1)
-                _rrect2d(pocket_w, pocket_d, 0.5);
+    // Floor — solid plate covering the full cradle footprint.
+    translate([cx, (y0 + y1) / 2, floor_t / 2])
+        cube([cradle_outer_w, cradle_outer_d, floor_t], center = true);
 
-        // Open the front face BELOW the lip band — full pocket width.
-        translate([-pocket_w / 2,
-                   pocket_front_y - 0.01,
-                   floor_t])
-            cube([pocket_w,
-                  front_lip_t + 0.02,
-                  holder_h - floor_t - front_lip_band + 0.001]);
+    // Left side rim.
+    translate([-cradle_inner_w / 2 - side_rim_t / 2,
+               (y0 + y1) / 2,
+               floor_t + rim_h / 2])
+        cube([side_rim_t, cradle_outer_d, rim_h], center = true);
 
-        // Open the front face WITHIN the lip band — only the gap
-        // between the two retention lips (leaves the lips standing).
-        translate([-front_gap / 2,
-                   pocket_front_y - 0.01,
-                   holder_h - front_lip_band])
-            cube([front_gap,
-                  front_lip_t + 0.02,
-                  front_lip_band + 0.01]);
+    // Right side rim.
+    translate([ cradle_inner_w / 2 + side_rim_t / 2,
+               (y0 + y1) / 2,
+               floor_t + rim_h / 2])
+        cube([side_rim_t, cradle_outer_d, rim_h], center = true);
 
-        // Dovetail slot, centred along X, opens at the top of the holder
-        // so it slides DOWN onto the clip's rail. Library frame puts the
-        // standoff in +X; rotate([0,0,90]) maps that to world +Y so the
-        // slot cuts INTO the back wall from the Y=0 face.
-        slot_centre_z = holder_h - clip_dovetail_l() / 2 - 1.5;
-        translate([0, 0, slot_centre_z])
-            rotate([0, 0, 90])
-                dovetail_slot(open_ends = "high");
-    }
+    // Front rim.
+    translate([cx,
+               y1 - front_rim_t / 2,
+               floor_t + rim_h / 2])
+        cube([cradle_inner_w, front_rim_t, rim_h], center = true);
 }
 
-// Where the holder ends up when "docked" on the clip — used for the
-// `all` layout preview (NOT for actual printing; clip and holder are
-// always printed separately).
-module clip_with_holder_preview() {
-    color("SteelBlue") clip(grip_d = clip_grip_d,
-                            grip_h = clip_grip_h,
-                            width = clip_width,
-                            wall_t = clip_wall_t,
-                            top_r = clip_top_r,
-                            arm_extend = clip_arm_extend);
-
-    // Place the holder so its back face hugs the clip's front-arm outer
-    // face, and its dovetail slot lines up with the rail.
-    rail_x = 2 * clip_wall_t + clip_grip_d;
-    rail_z = -clip_grip_h - clip_arm_extend / 2;
-    color("LightCoral") translate([rail_x, 0, rail_z - (clip_dovetail_l()/2) + 1.0])
-        rotate([0, 0, 0])
-            remote_holder();
+// Full holder = back plate (with slot) + cradle in front of it.
+module remote_holder() {
+    union() {
+        modular_holder_back(width   = back_w,
+                            height  = back_h,
+                            wall_t  = back_t,
+                            corner_r = back_r);
+        cradle();
+    }
 }
 
 // ---- output ----
 if (render_target == "clip") {
-    clip(grip_d = clip_grip_d,
-         grip_h = clip_grip_h,
-         width = clip_width,
-         wall_t = clip_wall_t,
-         top_r = clip_top_r,
+    clip(grip_d = clip_grip_d, grip_h = clip_grip_h, width = clip_width,
+         wall_t = clip_wall_t, top_r = clip_top_r,
          arm_extend = clip_arm_extend);
 } else if (render_target == "holder") {
     remote_holder();
 } else if (render_target == "all") {
-    // Clip on the left, holder on the right, side by side for slicing.
+    // Clip rotated 90° so its width is along X for compact layout.
     translate([-all_spacing - clip_width / 2 - 2, 0, 0])
         rotate([0, 0, 90])
-            clip(grip_d = clip_grip_d,
-                 grip_h = clip_grip_h,
-                 width = clip_width,
-                 wall_t = clip_wall_t,
-                 top_r = clip_top_r,
-                 arm_extend = clip_arm_extend);
-    translate([all_spacing + holder_outer_w / 2, 0, 0])
+            clip(grip_d = clip_grip_d, grip_h = clip_grip_h,
+                 width = clip_width, wall_t = clip_wall_t,
+                 top_r = clip_top_r, arm_extend = clip_arm_extend);
+    translate([all_spacing + back_w / 2, 0, 0])
         remote_holder();
 }
