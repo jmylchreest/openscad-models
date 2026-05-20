@@ -46,17 +46,21 @@ function clip_dovetail_clearance() = CLIP_DOVETAIL_CLEARANCE;
 
 // Cross-section of the dovetail in 2D, centred on the slide-axis. The
 // shape is drawn in OpenSCAD's XY plane (drawing X = width across, drawing
-// Y = standoff from the mount surface). Apply `extra` to scale up
-// uniformly — used by the slot to add slide clearance.
+// Y = standoff from the mount surface). The neck (where the rail
+// attaches to its parent) sits at Y=0 NARROW; the tip sits at Y=d WIDE.
+// That orientation gives a proper dovetail undercut — the wider tip can't
+// pull back through the narrower neck/opening, locking the joint
+// perpendicular to the slide axis. Apply `extra` to scale up uniformly
+// (used by the slot to add slide clearance).
 module _dovetail_section_2d(extra = 0) {
-    wb = CLIP_DOVETAIL_W_BASE + 2 * extra;
-    wt = CLIP_DOVETAIL_W_TOP  + 2 * extra;
+    wb = CLIP_DOVETAIL_W_BASE + 2 * extra;   // base/tip width (wider)
+    wt = CLIP_DOVETAIL_W_TOP  + 2 * extra;   // top/neck width (narrower)
     d  = CLIP_DOVETAIL_D       + extra;
     polygon([
-        [-wb / 2, 0],
-        [ wb / 2, 0],
-        [ wt / 2, d],
-        [-wt / 2, d],
+        [-wt / 2, 0],     // neck (narrow), at the mount surface
+        [ wt / 2, 0],
+        [ wb / 2, d],     // tip (wide), undercut into the slot interior
+        [-wb / 2, d],
     ]);
 }
 
@@ -100,15 +104,29 @@ module dovetail_rail(length     = CLIP_DOVETAIL_L,
     }
 }
 
-// Negative dovetail slot for subtraction. Same frame as `dovetail_rail`:
-// rail base at X=0, depth into +X, width ±Y, slide along ±Z.
+// Negative dovetail slot for subtraction from a positive parent. The
+// slot's frame matches `dovetail_rail`: neck (narrower opening) at
+// X=0, tip (wider interior) at X=d_total, width ±Y, slide along ±Z.
+//
 // `open_ends` says which Z end(s) are open through the parent. The
 // default "high" opens at +Z so the holder can slide DOWN onto the
-// rail; the closed -Z end caps the slot and rests on the rail's -Z
-// face, supporting the holder under gravity.
-module dovetail_slot(length    = CLIP_DOVETAIL_L + 0.6,
-                     open_ends = "high",
-                     overcut   = 0.4) {
+// rail through the +Z opening; the closed -Z end caps the slot and
+// rests on the rail's -Z bottom face, supporting the holder under
+// gravity.
+//
+// Dimples are small spherical hollows on the slot's deepest interior
+// wall (at X = d_total), at Z positions matching the rail's friction
+// bumps. When the holder slides fully down, each bump drops into its
+// matching dimple — that's the "click" that locks the holder in place.
+// Set `bumps = false` to skip them (e.g., for a slot that mates with
+// a bumpless rail).
+module dovetail_slot(length     = CLIP_DOVETAIL_L + 0.6,
+                     open_ends  = "high",
+                     overcut    = 0.4,
+                     bumps      = true,
+                     bump_size  = 0.4,
+                     bump_count = 2) {
+    d_total = CLIP_DOVETAIL_D + CLIP_DOVETAIL_CLEARANCE;
     // Body — trapezoid prism with clearance.
     rotate([0, 0, -90])
         linear_extrude(height = length, center = true)
@@ -117,13 +135,27 @@ module dovetail_slot(length    = CLIP_DOVETAIL_L + 0.6,
     // Through-cut "lead-in" at the open Z end(s) so the slot exits the
     // parent's top (or bottom) face cleanly even if the parent is taller.
     cap_w = CLIP_DOVETAIL_W_BASE + 2 * CLIP_DOVETAIL_CLEARANCE;
-    cap_d = CLIP_DOVETAIL_D      +     CLIP_DOVETAIL_CLEARANCE + overcut;
+    cap_d = d_total + overcut * 2;
     if (open_ends == "high" || open_ends == "both")
         translate([-overcut, -cap_w / 2, length / 2])
             cube([cap_d, cap_w, 5]);
     if (open_ends == "low" || open_ends == "both")
         translate([-overcut, -cap_w / 2, -length / 2 - 5])
             cube([cap_d, cap_w, 5]);
+
+    // Friction dimples on the slot's deepest interior wall (at X =
+    // d_total). Sphere centres sit ON the wall surface so half the
+    // dimple is in the cavity (where the bump can drop in) and half
+    // bites into the parent material (forming the dimple).
+    if (bumps && bump_count > 0) {
+        for (i = [0 : bump_count - 1]) {
+            z = bump_count == 1
+                    ? 0
+                    : -CLIP_DOVETAIL_L / 2 + (i + 0.5) * CLIP_DOVETAIL_L / bump_count;
+            translate([d_total, 0, z])
+                sphere(r = bump_size);
+        }
+    }
 }
 
 // Parametric spring clip — hairpin shape. Back arm at X=0, front arm at
@@ -179,10 +211,12 @@ module clip(
         }
 
         if (with_slot) {
-            // Slot opens at +Z, closed at -Z (the "bottom plate"). Cut
-            // from the extension's outer face (+X) inward toward the
-            // grip. rotate([0,0,180]) flips the rail-frame +X standoff
-            // to world -X so the slot eats INTO the arm.
+            // Slot opens at +Z, closed at -Z (the "bottom plate"). The
+            // slot's narrower neck sits at local X=0 and its wider
+            // interior at local X=d_total. Mirror with rotate([0,0,180])
+            // so the standoff axis flips into -X, then translate so the
+            // narrower opening lands exactly at the arm's outer face and
+            // the wider interior extends inward.
             slot_centre_z = -grip_h - CLIP_DOVETAIL_L / 2 - 2.5;
             translate([ext_outer_x, 0, slot_centre_z])
                 rotate([0, 0, 180])
