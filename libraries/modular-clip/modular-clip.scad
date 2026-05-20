@@ -36,6 +36,14 @@ CLIP_DOVETAIL_D         =  4.0;  // how proud the rail stands
 CLIP_DOVETAIL_L         = 25.0;  // length along the slide direction
 CLIP_DOVETAIL_CLEARANCE =  0.25; // slot is this much larger than rail per side
 
+// Friction bump + matching dimple geometry — these MUST be in sync
+// between the rail (positive bumps) and the slot (negative dimples)
+// or the bumps won't drop into their dimples. Both `dovetail_rail()`
+// and `dovetail_slot()` read these constants by default; pass
+// parameters only if you really need to override for a specific call.
+CLIP_BUMP_SIZE  = 0.6;   // sphere radius for both bump and dimple
+CLIP_BUMP_COUNT = 2;     // number of bump/dimple pairs along the rail
+
 // Accessors so `use<>` consumers can read the constants (variables
 // aren't imported by use<>).
 function clip_dovetail_w_base()    = CLIP_DOVETAIL_W_BASE;
@@ -43,6 +51,8 @@ function clip_dovetail_w_top()     = CLIP_DOVETAIL_W_TOP;
 function clip_dovetail_d()         = CLIP_DOVETAIL_D;
 function clip_dovetail_l()         = CLIP_DOVETAIL_L;
 function clip_dovetail_clearance() = CLIP_DOVETAIL_CLEARANCE;
+function clip_bump_size()          = CLIP_BUMP_SIZE;
+function clip_bump_count()         = CLIP_BUMP_COUNT;
 
 // Cross-section of the dovetail in 2D, centred on the slide-axis. The
 // shape is drawn in OpenSCAD's XY plane (drawing X = width across, drawing
@@ -66,18 +76,24 @@ module _dovetail_section_2d(extra = 0) {
 
 // Positive dovetail rail. Origin at the centre of the mount-surface side
 // (so the rail's base sits on Z=0 of its parent's surface). The rail
-// stands in +X, with width along Y and length along Z (centred). Two
-// small friction bumps on the rail's +X (outermost) face grip the slot's
-// interior as the rail slides in, holding the holder snugly in place.
+// stands in +X, with width along Y and length along Z (centred). Small
+// friction bumps on the rail's +X (outermost) face grip the slot's
+// interior as the rail slides in, dropping into the slot's matching
+// dimples at the fully-engaged position.
 //
 //   length     mm rail length along the slide axis (default = CLIP_DOVETAIL_L)
 //   bumps      bool — include friction bumps (default true)
-//   bump_size  mm — bump proud height (default 0.4)
-//   bump_count integer — number of bumps along the rail length (default 2)
+//   bump_size  mm sphere radius for each bump (default = CLIP_BUMP_SIZE)
+//   bump_count integer — number of bumps along the rail (default = CLIP_BUMP_COUNT)
+//
+// `bump_size` and `bump_count` default to the shared CLIP_BUMP_* constants
+// so a rail and the slot it mates with stay in sync automatically. Only
+// override them if you have a specific reason — and then override the
+// matching values on the slot side too.
 module dovetail_rail(length     = CLIP_DOVETAIL_L,
                      bumps      = true,
-                     bump_size  = 0.4,
-                     bump_count = 2) {
+                     bump_size  = CLIP_BUMP_SIZE,
+                     bump_count = CLIP_BUMP_COUNT) {
     union() {
         // Rail body. Section drawn in XY (X = width, Y = standoff),
         // extruded in +Z. rotate([0, 0, -90]) maps:
@@ -89,16 +105,15 @@ module dovetail_rail(length     = CLIP_DOVETAIL_L,
                 _dovetail_section_2d();
 
         // Friction bumps on the +X (outer) face of the rail. Hemispheres
-        // sized to give a slight interference fit with the slot's clearance
-        // — bump_size mm proud → bump_size − slot_clearance mm of squeeze.
+        // sized to give a slight interference fit with the slot's clearance.
         if (bumps && bump_count > 0) {
-            br = bump_size;
             for (i = [0 : bump_count - 1]) {
                 z = bump_count == 1
                         ? 0
-                        : -length / 2 + (i + 0.5) * length / bump_count;
+                        : -CLIP_DOVETAIL_L / 2
+                          + (i + 0.5) * CLIP_DOVETAIL_L / bump_count;
                 translate([CLIP_DOVETAIL_D, 0, z])
-                    sphere(r = br);
+                    sphere(r = bump_size);
             }
         }
     }
@@ -120,12 +135,16 @@ module dovetail_rail(length     = CLIP_DOVETAIL_L,
 // matching dimple — that's the "click" that locks the holder in place.
 // Set `bumps = false` to skip them (e.g., for a slot that mates with
 // a bumpless rail).
+//
+// Like `dovetail_rail()`, the bump SIZE and COUNT default to the shared
+// CLIP_BUMP_* constants so a slot stays in sync with the rail it mates
+// with. Only override if you have a specific reason.
 module dovetail_slot(length     = CLIP_DOVETAIL_L + 0.6,
                      open_ends  = "high",
                      overcut    = 0.4,
                      bumps      = true,
-                     bump_size  = 0.4,
-                     bump_count = 2) {
+                     bump_size  = CLIP_BUMP_SIZE,
+                     bump_count = CLIP_BUMP_COUNT) {
     d_total = CLIP_DOVETAIL_D + CLIP_DOVETAIL_CLEARANCE;
     // Body — trapezoid prism with clearance.
     rotate([0, 0, -90])
