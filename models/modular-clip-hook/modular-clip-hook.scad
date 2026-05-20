@@ -14,13 +14,13 @@ clip_grip_h     = 25;
 clip_width      = 30;
 clip_wall_t     = 2.5;
 clip_top_r      = 2.0;
-clip_arm_extend = 24;
+clip_arm_extend = 32;   // ≥ CLIP_DOVETAIL_L + 2 mm so the slot fits
 
 /* [Hook back plate] */
-back_w     = 26;   // X width of the back plate
-back_h     = 40;   // Z height
-back_t     = 5;    // Y thickness — must clear the dovetail slot
-back_r     = 3;    // outer corner radius (cosmetic)
+plate_w     = 24;   // X width of the back plate
+plate_h     = 35;   // Z height — covers the rail at the top + the hook anchor below
+plate_t     = 3;    // Y thickness behind the rail
+plate_r     = 3;    // outer corner radius (cosmetic)
 
 /* [Hook] */
 hook_w        = 8;     // X width of the hook itself
@@ -29,7 +29,7 @@ hook_shaft_t  = 5;     // Z thickness of the horizontal shaft
 hook_tip_h    = 14;    // Z height of the upturned tip
 hook_tip_t    = 4;     // Y thickness of the upturned tip
 hook_fillet   = 2.5;   // corner-rounding radius on the 2D hook profile
-hook_z_offset = 18;    // Z offset from the bottom of the back plate to the hook bottom
+hook_z_offset = 6;     // Z offset from the bottom of the plate to the hook bottom
 
 /* [Quality] */
 $fa = $preview ? $fa : 1;
@@ -56,22 +56,23 @@ module _hook_profile_2d() {
             ]);
 }
 
-// L-hook attached to the front face of the back plate. Shaft sticks out
-// in +Y; vertical tip at the end of the shaft points up in +Z.
+// L-hook attached to the front face of the back plate (which sits at Y=0
+// in the new male-connector frame). Shaft sticks out in +Y; vertical tip
+// at the end of the shaft points up in +Z.
 module hook_body() {
-    translate([0, back_t, hook_z_offset])
+    translate([0, 0, hook_z_offset])
         rotate([90, 0, 90])
             linear_extrude(height = hook_w, center = true)
                 _hook_profile_2d();
 }
 
-// Full hook = back plate (with slot) + hook body in front.
+// Full hook = back plate (with male rail on its back) + hook body in front.
 module hook() {
     union() {
-        modular_holder_back(width   = back_w,
-                            height  = back_h,
-                            wall_t  = back_t,
-                            corner_r = back_r);
+        modular_holder_back(width    = plate_w,
+                            height   = plate_h,
+                            wall_t   = plate_t,
+                            corner_r = plate_r);
         hook_body();
     }
 }
@@ -89,6 +90,6 @@ if (render_target == "clip") {
             clip(grip_d = clip_grip_d, grip_h = clip_grip_h,
                  width = clip_width, wall_t = clip_wall_t,
                  top_r = clip_top_r, arm_extend = clip_arm_extend);
-    translate([all_spacing + back_w / 2, 0, 0])
+    translate([all_spacing + plate_w / 2, 0, 0])
         hook();
 }
