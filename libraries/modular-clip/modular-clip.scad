@@ -141,6 +141,47 @@ module clip(
     }
 }
 
+// Reusable back-plate for a modular holder. A solid flat plate sized to
+// hold the standard dovetail slot, with the slot already cut. Accessories
+// (pockets, hooks, brackets, …) union their body in front of this plate
+// — anything in +Y past `wall_t` is the accessory.
+//
+// Frame: plate centred along X, back face at Y=0, front face at
+// Y=wall_t, bottom at Z=0, top at Z=height. Slot opens at +Z (top).
+//
+//   width                  mm — X extent (default leaves 5 mm of margin
+//                               around the slot's base width)
+//   height                 mm — Z extent (default leaves 7 mm of margin
+//                               above the slot — keep this room for the
+//                               accessory body to clamp the slot edges)
+//   wall_t                 mm — Y thickness (must be ≥ CLIP_DOVETAIL_D +
+//                               CLIP_DOVETAIL_CLEARANCE so the slot fits
+//                               inside the plate without breakthrough)
+//   corner_r               mm — back-face corner radius (cosmetic)
+//   slot_z_offset_from_top mm — slot top edge sits this far below the
+//                               plate's +Z top so the slot has a closed
+//                               cap to seat on the rail (default 1.5)
+module modular_holder_back(width                  = CLIP_DOVETAIL_W_BASE + 10,
+                           height                 = CLIP_DOVETAIL_L + 14,
+                           wall_t                 = 5,
+                           corner_r               = 2,
+                           slot_z_offset_from_top = 1.5) {
+    slot_centre_z = height - CLIP_DOVETAIL_L / 2 - slot_z_offset_from_top;
+    difference() {
+        // Flat plate, X centred on 0, Y from 0 to wall_t, Z from 0 to height.
+        // rotate([-90,0,0]) maps the linear_extrude's +Z axis into world +Y
+        // so the plate's thickness ends up in the +Y direction.
+        translate([0, 0, height / 2])
+            rotate([-90, 0, 0])
+                linear_extrude(height = wall_t)
+                    offset(r = corner_r) offset(r = -corner_r)
+                        square([width, height], center = true);
+        translate([0, 0, slot_centre_z])
+            rotate([0, 0, 90])
+                dovetail_slot(open_ends = "high");
+    }
+}
+
 // 2D side profile of the clip in OpenSCAD's XY plane:
 //   drawing X = world X (across the channel)
 //   drawing Y = world Z (vertical — top of clip at higher Y, arms hang in -Y)
@@ -168,15 +209,12 @@ module _clip_profile_2d(grip_d, grip_h, wall_t, top_r, arm_extend) {
     }
 }
 
-// Demo — only runs when this file is opened directly.
+// Demo — only runs when this file is opened directly. Shows the clip on
+// the left and a `modular_holder_back` plate on the right (the reusable
+// piece that accessories union with to attach themselves to a clip).
 if ($preview) {
     $fa = 1; $fs = 0.2; $fn = 64;
     color("SteelBlue") clip();
-    // Visualise the slot side as a translucent block with the slot cut.
-    translate([60, 0, -25])
-        color("LightCoral", 0.7)
-            difference() {
-                translate([-3, -15, -20]) cube([15, 30, 35]);
-                translate([0, 0, 0]) dovetail_slot();
-            }
+    color("LightCoral") translate([55, 0, -50])
+        modular_holder_back();
 }

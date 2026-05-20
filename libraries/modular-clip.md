@@ -22,6 +22,14 @@ fixed so the parts always fit.
   `difference()`. `open_ends = "high"` (default) leaves the +Z end open
   so a holder slides DOWN onto the rail; the closed -Z end seats on the
   rail's bottom face and carries the holder under gravity.
+- `modular_holder_back(width, height, wall_t, corner_r, slot_z_offset_from_top)`
+  — reusable back-plate for accessories. A solid flat plate with the
+  standard dovetail slot already cut. Sits in the +Y half-space (back
+  face at Y=0, front face at Y=wall_t); accessories union their body in
+  front of it. Use this exactly the way `skadis_peg` is used in
+  ikea-skadis: drop it in, then add your accessory geometry off the +Y
+  face. Width / height / thickness / corner radius are parametric; the
+  slot dimensions are fixed by the dovetail interface.
 - Accessor functions (`clip_dovetail_w_base()`, etc.) so `use<>`
   consumers can read the interface constants without copying values.
 
@@ -58,15 +66,17 @@ use <libraries/modular-clip/modular-clip.scad>
 // Just the clip (with the rail).
 clip(grip_d = 5, grip_h = 25, width = 30, arm_extend = 24);
 
-// A simple holder with the matching slot.
-difference() {
-    cube([40, 14, 60], center = false);
-    translate([20, 0, 50])
-        rotate([0, 0, 90])
-            dovetail_slot(open_ends = "high");
+// An accessory: take the back plate, union your geometry off its +Y face.
+union() {
+    modular_holder_back(width = 40, height = 60);
+    // ...your hook / cradle / tray geometry, sitting in +Y past wall_t...
 }
 ```
 
-The first finished holder in this repo is
-[`models/modular-clip-remote-holder/`](../models/modular-clip-remote-holder/),
-sized for a 34 × 7.5 mm remote.
+## Accessories in this repo
+
+- [`models/modular-clip-remote-holder/`](../models/modular-clip-remote-holder/)
+  — back plate + cradle for a 34 × 7.5 mm remote (or any similarly sized
+  remote — all dimensions parametric).
+- [`models/modular-clip-hook/`](../models/modular-clip-hook/)
+  — back plate + L-hook for cables, keys, headphones, small bags.
