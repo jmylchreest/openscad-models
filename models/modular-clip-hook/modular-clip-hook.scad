@@ -81,19 +81,28 @@ module hook() {
     }
 }
 
-// ---- output ----
-if (render_target == "clip") {
-    clip(grip_d = clip_grip_d, grip_h = clip_grip_h, width = clip_width,
-         wall_t = clip_wall_t, top_r = clip_top_r,
-         arm_extend = clip_arm_extend);
-} else if (render_target == "hook") {
-    hook();
-} else if (render_target == "all") {
-    translate([-all_spacing - clip_width / 2 - 2, 0, 0])
-        rotate([0, 0, 90])
+// Clip dropped onto its side and shifted so its lowest Z is at Z=0 —
+// the whole side profile rests on the bed for a low-support print.
+module _printable_clip() {
+    translate([0, 0, clip_width / 2])
+        rotate([90, 0, 0])
             clip(grip_d = clip_grip_d, grip_h = clip_grip_h,
                  width = clip_width, wall_t = clip_wall_t,
                  top_r = clip_top_r, arm_extend = clip_arm_extend);
+}
+
+// ---- output ----
+if (render_target == "clip") {
+    _printable_clip();
+} else if (render_target == "hook") {
+    hook();
+} else if (render_target == "all") {
+    // Both parts sit with their lowest face at Z=0 (the bed). Clip on
+    // the left (laid flat), hook on the right (standing upright on its
+    // back plate base).
+    clip_x_w = clip_top_r + clip_wall_t * 2 + clip_grip_d;
+    translate([-all_spacing - clip_x_w / 2, 0, 0])
+        _printable_clip();
     translate([all_spacing + plate_w / 2, 0, 0])
         hook();
 }

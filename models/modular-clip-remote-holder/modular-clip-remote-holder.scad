@@ -12,9 +12,9 @@ use <../../libraries/modular-clip/modular-clip.scad>
 render_target = "all";  // [clip, holder, all]
 
 /* [Clip — grips the edge] */
-clip_grip_d     = 5;
+clip_grip_d     = 2.55;
 clip_grip_h     = 25;
-clip_width      = 30;
+clip_width      = 20;
 clip_wall_t     = 2.5;
 clip_top_r      = 2.0;
 clip_arm_extend = 32;   // ≥ CLIP_DOVETAIL_L + 2 mm so the slot fits
@@ -39,7 +39,7 @@ cradle_clear_w   = 0.6;  // total X clearance for the remote in the cradle
 cradle_clear_d   = 0.4;  // total Y clearance for the remote
 floor_t          = 2.0;  // floor thickness (solid bottom — stops the remote falling through)
 arm_t            = 1.6;  // thickness of each arm (Y for side arms, X for the front arm)
-arm_h            = 9.0;  // arms rise this far above the floor
+arm_h            = 30.0;  // arms rise this far above the floor
 front_arm_w      = 8.0;  // X width of each front arm (a gap in the middle for thumb access)
 
 /* [Quality] */
@@ -100,20 +100,30 @@ module remote_holder() {
     }
 }
 
-// ---- output ----
-if (render_target == "clip") {
-    clip(grip_d = clip_grip_d, grip_h = clip_grip_h, width = clip_width,
-         wall_t = clip_wall_t, top_r = clip_top_r,
-         arm_extend = clip_arm_extend);
-} else if (render_target == "holder") {
-    remote_holder();
-} else if (render_target == "all") {
-    // Clip rotated 90° so its width is along X for compact layout.
-    translate([-all_spacing - clip_width / 2 - 2, 0, 0])
-        rotate([0, 0, 90])
+// Clip dropped onto its side and shifted so its lowest Z is at Z=0 —
+// the whole side profile rests on the bed for a low-support print.
+// In world Y after the flat-rotation, the clip's "top fold to arm tip"
+// runs along Y from `-clip_top_r - clip_wall_t` to `clip_grip_h + clip_arm_extend`.
+module _printable_clip() {
+    translate([0, 0, clip_width / 2])
+        rotate([90, 0, 0])
             clip(grip_d = clip_grip_d, grip_h = clip_grip_h,
                  width = clip_width, wall_t = clip_wall_t,
                  top_r = clip_top_r, arm_extend = clip_arm_extend);
+}
+
+// ---- output ----
+if (render_target == "clip") {
+    _printable_clip();
+} else if (render_target == "holder") {
+    remote_holder();
+} else if (render_target == "all") {
+    // Both parts sit with their lowest face at Z=0 (the bed). Clip on
+    // the left (laid flat), holder on the right (standing upright on
+    // its cradle floor).
+    clip_x_w = clip_top_r + clip_wall_t * 2 + clip_grip_d;  // clip's X footprint
+    translate([-all_spacing - clip_x_w / 2, 0, 0])
+        _printable_clip();
     translate([all_spacing + cradle_outer_w / 2, 0, 0])
         remote_holder();
 }
