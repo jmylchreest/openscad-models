@@ -216,8 +216,10 @@ module clip(
             // interior at local X=d_total. Mirror with rotate([0,0,180])
             // so the standoff axis flips into -X, then translate so the
             // narrower opening lands exactly at the arm's outer face and
-            // the wider interior extends inward.
-            slot_centre_z = -grip_h - CLIP_DOVETAIL_L / 2 - 2.5;
+            // the wider interior extends inward. Slot's top edge sits at
+            // the very top of the extension (Z = -grip_h) so the rail
+            // can drop straight down into it — no angled entry.
+            slot_centre_z = -grip_h - CLIP_DOVETAIL_L / 2;
             translate([ext_outer_x, 0, slot_centre_z])
                 rotate([0, 0, 180])
                     dovetail_slot(open_ends = "high");
@@ -284,8 +286,12 @@ module modular_holder_back(width                  = CLIP_DOVETAIL_W_BASE + 6,
 //   drawing Y = world Z (vertical — top of clip at higher Y, arms hang in -Y)
 // Back arm at drawing X in [0, wall_t]. Front arm at drawing X in
 // [wall_t + grip_d, 2*wall_t + grip_d]. The top fold curves above Y = 0.
+// The fold's inner radius is ALWAYS grip_d/2 — that's what makes the
+// fold's two walls align with the two arms. The legacy `top_r` parameter
+// is ignored: a fold radius larger than grip_d/2 would leave a step
+// between the arm and the fold, which prints as a sharp corner.
 module _clip_profile_2d(grip_d, grip_h, wall_t, top_r, arm_extend) {
-    r_in  = max(top_r, grip_d / 2);
+    r_in  = grip_d / 2;
     r_out = r_in + wall_t;
     cx    = wall_t + grip_d / 2;
 
