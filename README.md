@@ -12,11 +12,17 @@ Parametric OpenSCAD models and the libraries I wrote to support them.
 
 ## Models
 
-`models/` — finished parametric models that compose the libraries above
-(Skadis containers, mug holders, USB adapters, …). `test-prints/` —
-minimum-material fit-check pieces for the same designs.
+| Model | What it is |
+|---|---|
+| [skadis-container](./models/skadis-container/) | Wall-mountable parametric pegboard container with per-face styles (solid / hex / grid), parametric peg layout, tapered standoff bracket, and three drop-in inserts (pens, USB-A/C, rectangular compartments). |
+| [skadis-mug-holder](./models/skadis-mug-holder/) | Open-front pegboard mug holder — back pegs, front handle slot, configurable per-side panel style. |
+| [modular-clip-remote-holder](./models/modular-clip-remote-holder/) | Spring clip onto any thin edge + a slim cradle that holds a remote (default 34 × 7.5 mm). Cradle slides onto the clip via the [modular-clip](./libraries/modular-clip.md) dovetail. |
+| [modular-clip-hook](./models/modular-clip-hook/) | L-hook accessory on the same modular-clip dovetail — cables, keys, headphones. Any modular-clip mates with any modular-clip accessory. |
+| [usb-a-to-c-storage-adapter](./models/usb-a-to-c-storage-adapter/) | Parametric solid USB-A shell hollowed to a USB-C pocket — friction-fits into a USB-A storage slot to convert it. |
 
-Each directory follows the same layout:
+`test-prints/` — minimum-material fit-check pieces for the same designs.
+
+Each model / test-print directory follows the same layout:
 
 ```
 <name>/
