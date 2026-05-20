@@ -4,27 +4,36 @@
 //
 // The "clip system" is a two-part design:
 //   * A clip body (this file) that grips an edge (belt, shelf back, desk
-//     edge, etc.) with a sprung hairpin shape. The downward-extending arm
-//     of the clip carries a dovetail rail on its outside face.
-//   * A holder body (your model) with a matching dovetail SLOT on its
-//     back that slides onto the clip from above.
+//     edge, etc.) with a sprung hairpin shape. The downward-extending
+//     arm of the clip carries a dovetail SLOT (female) on its outside
+//     face, closed at the bottom so the slot's closed end acts as a
+//     "bottom plate" that holds the holder up under load.
+//   * A holder body (your model) with the matching dovetail RAIL (male)
+//     on its back. The rail has small friction bumps to give a snug
+//     hold. Slide the holder DOWN onto the clip from above; the rail
+//     enters the slot through the open top, the bumps grip on the way
+//     down, and the slot's closed bottom catches the rail when it
+//     bottoms out.
 //
 // Any clip mates with any holder as long as both use the constants below.
 // Vary clip width / grip depth / arm length per use; vary holder geometry
 // per item — the dovetail interface stays fixed.
 //
 // Frame: the clip is rendered with the top fold at +Z, arms hanging in
-// -Z, the gripped edge passing through in ±Y (so the clip width is along
-// Y). The back arm is at X=0 (against the wall side); the front arm is
-// at X = 2*wall_t + grip_d, with the dovetail rail on its +X (outward)
-// face. The front arm extends below the grip region by `arm_extend` mm
-// to carry the rail.
+// -Z, the gripped edge passing through in ±Y. The back arm is at X=0
+// (against the wall side); the front arm is at X = 2*wall_t + grip_d
+// (locally thickened in the extension region to make room for the slot,
+// cut into the +X outward face).
 
 /* [Standard dovetail interface — DO NOT change per-model] */
-CLIP_DOVETAIL_W_BASE    = 12.0;  // rail base width (against mount surface)
-CLIP_DOVETAIL_W_TOP     =  8.0;  // rail top width (narrower → locks)
-CLIP_DOVETAIL_D         =  3.0;  // how proud the rail stands
-CLIP_DOVETAIL_L         = 20.0;  // length along the slide direction
+// Sized for confident hold under load: 14 × 4 mm cross-section gives a
+// 56 mm² bottom-face contact patch carrying the holder's weight, and the
+// 2 mm undercut per side resists any pull-off perpendicular to the slide
+// axis. 25 mm of engaged length keeps the holder from rocking.
+CLIP_DOVETAIL_W_BASE    = 14.0;  // rail base width (against mount surface)
+CLIP_DOVETAIL_W_TOP     = 10.0;  // rail top width (narrower → locks)
+CLIP_DOVETAIL_D         =  4.0;  // how proud the rail stands
+CLIP_DOVETAIL_L         = 25.0;  // length along the slide direction
 CLIP_DOVETAIL_CLEARANCE =  0.25; // slot is this much larger than rail per side
 
 // Accessors so `use<>` consumers can read the constants (variables
@@ -52,24 +61,43 @@ module _dovetail_section_2d(extra = 0) {
 }
 
 // Positive dovetail rail. Origin at the centre of the mount-surface side
-// (so the rail's base sits on Z=0 of its parent's surface after that
-// surface is rotated to face +X). The rail stands in +X, with width
-// along Y and length running along Z (centred at origin).
-//   length      mm of rail length along the slide axis (default = CLIP_DOVETAIL_L)
+// (so the rail's base sits on Z=0 of its parent's surface). The rail
+// stands in +X, with width along Y and length along Z (centred). Two
+// small friction bumps on the rail's +X (outermost) face grip the slot's
+// interior as the rail slides in, holding the holder snugly in place.
 //
-// Holder slot opens at the +Z end; rail's matching closed end on the
-// slot side supports the holder under gravity, so no separate stop tab
-// is needed — just rely on the slot's closed -Z cap meeting the rail's
-// -Z bottom face.
-module dovetail_rail(length = CLIP_DOVETAIL_L) {
-    // Section drawn in XY (X = width, Y = standoff), extruded in +Z.
-    // rotate([0, 0, -90]) maps:
-    //   drawing X (width)    → world -Y (centred → ±Y)
-    //   drawing Y (standoff) → world +X
-    //   extrude Z (length)   → world +Z
-    rotate([0, 0, -90])
-        linear_extrude(height = length, center = true)
-            _dovetail_section_2d();
+//   length     mm rail length along the slide axis (default = CLIP_DOVETAIL_L)
+//   bumps      bool — include friction bumps (default true)
+//   bump_size  mm — bump proud height (default 0.4)
+//   bump_count integer — number of bumps along the rail length (default 2)
+module dovetail_rail(length     = CLIP_DOVETAIL_L,
+                     bumps      = true,
+                     bump_size  = 0.4,
+                     bump_count = 2) {
+    union() {
+        // Rail body. Section drawn in XY (X = width, Y = standoff),
+        // extruded in +Z. rotate([0, 0, -90]) maps:
+        //   drawing X (width)    → world -Y (centred → ±Y)
+        //   drawing Y (standoff) → world +X
+        //   extrude Z (length)   → world +Z
+        rotate([0, 0, -90])
+            linear_extrude(height = length, center = true)
+                _dovetail_section_2d();
+
+        // Friction bumps on the +X (outer) face of the rail. Hemispheres
+        // sized to give a slight interference fit with the slot's clearance
+        // — bump_size mm proud → bump_size − slot_clearance mm of squeeze.
+        if (bumps && bump_count > 0) {
+            br = bump_size;
+            for (i = [0 : bump_count - 1]) {
+                z = bump_count == 1
+                        ? 0
+                        : -length / 2 + (i + 0.5) * length / bump_count;
+                translate([CLIP_DOVETAIL_D, 0, z])
+                    sphere(r = br);
+            }
+        }
+    }
 }
 
 // Negative dovetail slot for subtraction. Same frame as `dovetail_rail`:
@@ -100,86 +128,121 @@ module dovetail_slot(length    = CLIP_DOVETAIL_L + 0.6,
 
 // Parametric spring clip — hairpin shape. Back arm at X=0, front arm at
 // X = 2*wall_t + grip_d. Top fold connects them at the top (+Z). The
-// front arm extends in -Z below the grip region by `arm_extend` mm; that
-// extension carries the dovetail rail on its +X face.
+// front arm extends in -Z below the grip region by `arm_extend` mm; the
+// outside of the extension is locally thickened so a dovetail slot
+// (female) can be cut into it without breaking through to the grip
+// channel. The slot opens at +Z (toward the grip) and is closed at -Z
+// — that closed bottom is the "bottom plate" that catches the holder's
+// rail and supports it under gravity.
 //
 //   grip_d      mm — thickness of the edge being gripped (channel width)
-//   grip_h      mm — vertical extent of the grip region (both arms cover)
-//   width       mm — clip width along Y (along the gripped edge)
-//   wall_t      mm — plastic wall thickness
+//   grip_h      mm — vertical extent of the grip region
+//   width       mm — clip width along Y
+//   wall_t      mm — plastic wall thickness in the grip region
 //   top_r       mm — inner radius of the 180° top fold (clamped to grip_d/2)
 //   arm_extend  mm — how far the front arm extends below the grip in -Z
-//                    (must be ≥ CLIP_DOVETAIL_L to hold the rail)
-//   with_rail   bool — draw the dovetail rail on the front arm extension
-//
-// Top of the back arm sits at Z = 0; arms hang in -Z; top fold curves up
-// into +Z.
+//                    (must be ≥ CLIP_DOVETAIL_L for the slot to fit)
+//   with_slot   bool — cut the dovetail slot into the extension
 module clip(
     grip_d     = 5,
     grip_h     = 25,
     width      = 28,
     wall_t     = 2.5,
     top_r      = 2.0,
-    arm_extend = 24,
-    with_rail  = true
+    arm_extend = 30,
+    with_slot  = true
 ) {
-    // 2D side profile in OpenSCAD XY (drawing X = world X, drawing Y =
-    // world Z). After linear_extrude in +Z then rotate, the profile lies
-    // in world XZ with the extruded width along Y.
-    rotate([90, 0, 0])
-        linear_extrude(height = width, center = true)
-            _clip_profile_2d(grip_d, grip_h, wall_t, top_r, arm_extend);
+    // Extension needs enough thickness to hold the slot. The slot is
+    // CLIP_DOVETAIL_D + clearance deep; leave at least 1.5 mm of arm
+    // wall behind it. Build an extra bump on the outside of the front
+    // arm in the extension region to hit that thickness.
+    slot_total_d = CLIP_DOVETAIL_D + CLIP_DOVETAIL_CLEARANCE;
+    min_ext_thk  = slot_total_d + 1.5;
+    ext_bump     = max(0, min_ext_thk - wall_t);
+    arm_outer_x  = 2 * wall_t + grip_d;
+    ext_outer_x  = arm_outer_x + ext_bump;
 
-    if (with_rail) {
-        // Front arm outer face is at world X = 2*wall_t + grip_d.
-        // Extension occupies Z = [-(grip_h + arm_extend), -grip_h];
-        // rail is centred along the extension and along the clip width.
-        rail_z = -grip_h - arm_extend / 2;
-        rail_x = 2 * wall_t + grip_d;
-        translate([rail_x, 0, rail_z])
-            dovetail_rail(length = min(arm_extend - 1, CLIP_DOVETAIL_L));
+    difference() {
+        union() {
+            // Base hairpin body (2D side profile extruded along width).
+            rotate([90, 0, 0])
+                linear_extrude(height = width, center = true)
+                    _clip_profile_2d(grip_d, grip_h, wall_t, top_r, arm_extend);
+
+            // Extension thickener — only in the extension Z range, on the
+            // outside of the front arm. Slot is cut from this thicker wall.
+            if (ext_bump > 0)
+                translate([arm_outer_x - 0.01,
+                           -width / 2,
+                           -grip_h - arm_extend])
+                    cube([ext_bump + 0.01, width, arm_extend]);
+        }
+
+        if (with_slot) {
+            // Slot opens at +Z, closed at -Z (the "bottom plate"). Cut
+            // from the extension's outer face (+X) inward toward the
+            // grip. rotate([0,0,180]) flips the rail-frame +X standoff
+            // to world -X so the slot eats INTO the arm.
+            slot_centre_z = -grip_h - CLIP_DOVETAIL_L / 2 - 2.5;
+            translate([ext_outer_x, 0, slot_centre_z])
+                rotate([0, 0, 180])
+                    dovetail_slot(open_ends = "high");
+        }
     }
 }
 
-// Reusable back-plate for a modular holder. A solid flat plate sized to
-// hold the standard dovetail slot, with the slot already cut. Accessories
-// (pockets, hooks, brackets, …) union their body in front of this plate
-// — anything in +Y past `wall_t` is the accessory.
+// Reusable back-plate for a modular holder — the MALE side of the
+// connector. A flat plate with the dovetail RAIL (with friction bumps)
+// mounted on its back face. Accessories union their body in front of
+// the plate (+Y) or below it (-Z).
 //
-// Frame: plate centred along X, back face at Y=0, front face at
-// Y=wall_t, bottom at Z=0, top at Z=height. Slot opens at +Z (top).
+// To install: lift the holder above the clip, line up the rail's top
+// with the clip's slot opening, and slide DOWN. The bumps engage the
+// slot interior with light friction; the rail bottoms out on the slot's
+// closed bottom (the clip's "bottom plate"), which carries the load.
 //
-//   width                  mm — X extent (default leaves 5 mm of margin
-//                               around the slot's base width)
-//   height                 mm — Z extent (default leaves 7 mm of margin
-//                               above the slot — keep this room for the
-//                               accessory body to clamp the slot edges)
-//   wall_t                 mm — Y thickness (must be ≥ CLIP_DOVETAIL_D +
-//                               CLIP_DOVETAIL_CLEARANCE so the slot fits
-//                               inside the plate without breakthrough)
-//   corner_r               mm — back-face corner radius (cosmetic)
-//   slot_z_offset_from_top mm — slot top edge sits this far below the
-//                               plate's +Z top so the slot has a closed
-//                               cap to seat on the rail (default 1.5)
-module modular_holder_back(width                  = CLIP_DOVETAIL_W_BASE + 10,
-                           height                 = CLIP_DOVETAIL_L + 14,
-                           wall_t                 = 5,
+// Frame: plate centred along X, front face at Y=0, back face at
+// Y=-wall_t, bottom at Z=0, top at Z=height. The rail sits on the back
+// face (-Y side), centred along X, near the top of the plate (so the
+// accessory body can extend down past it).
+//
+//   width                  mm — X extent (default leaves margin around
+//                               the rail base width)
+//   height                 mm — Z extent (default = rail length + room
+//                               for the accessory below)
+//   wall_t                 mm — Y thickness of the plate behind the rail
+//                               (default 3 mm — backs the rail without
+//                               being bulky)
+//   corner_r               mm — plate outer corner radius (cosmetic)
+//   rail_z_offset_from_top mm — rail top sits this far below the plate
+//                               top so the plate has room above the rail
+//                               (default 0 → rail flush with plate top)
+//   bumps                  bool — include friction bumps on the rail
+module modular_holder_back(width                  = CLIP_DOVETAIL_W_BASE + 6,
+                           height                 = CLIP_DOVETAIL_L + 8,
+                           wall_t                 = 3,
                            corner_r               = 2,
-                           slot_z_offset_from_top = 1.5) {
-    slot_centre_z = height - CLIP_DOVETAIL_L / 2 - slot_z_offset_from_top;
-    difference() {
-        // Flat plate, X centred on 0, Y from 0 to wall_t, Z from 0 to height.
-        // rotate([-90,0,0]) maps the linear_extrude's +Z axis into world +Y
-        // so the plate's thickness ends up in the +Y direction.
-        translate([0, 0, height / 2])
-            rotate([-90, 0, 0])
-                linear_extrude(height = wall_t)
-                    offset(r = corner_r) offset(r = -corner_r)
-                        square([width, height], center = true);
-        translate([0, 0, slot_centre_z])
-            rotate([0, 0, 90])
-                dovetail_slot(open_ends = "high");
-    }
+                           rail_z_offset_from_top = 0,
+                           bumps                  = true) {
+    rail_centre_z = height - CLIP_DOVETAIL_L / 2 - rail_z_offset_from_top;
+
+    // Flat plate, X centred on 0, Y from -wall_t to 0, Z from 0 to height.
+    // rotate([-90,0,0]) puts the extrusion thickness into +Y; translate
+    // by -wall_t shifts it into the -Y half-space (behind the front face
+    // at Y=0).
+    translate([0, -wall_t, height / 2])
+        rotate([-90, 0, 0])
+            linear_extrude(height = wall_t)
+                offset(r = corner_r) offset(r = -corner_r)
+                    square([width, height], center = true);
+
+    // Male rail on the plate's back face (Y = -wall_t), standoff into -Y.
+    // rotate([0,0,180]) flips the library frame's +X standoff to -X;
+    // rotate([0,0,90]) would put standoff in +Y, so combine to get -Y.
+    // Net rotation: rotate([0,0,-90]) maps +X (rail standoff) → -Y.
+    translate([0, -wall_t, rail_centre_z])
+        rotate([0, 0, -90])
+            dovetail_rail(bumps = bumps);
 }
 
 // 2D side profile of the clip in OpenSCAD's XY plane:
@@ -209,9 +272,10 @@ module _clip_profile_2d(grip_d, grip_h, wall_t, top_r, arm_extend) {
     }
 }
 
-// Demo — only runs when this file is opened directly. Shows the clip on
-// the left and a `modular_holder_back` plate on the right (the reusable
-// piece that accessories union with to attach themselves to a clip).
+// Demo — only runs when this file is opened directly. Shows the clip
+// (with the female slot in its extension) on the left and a
+// `modular_holder_back` plate (with the male rail + friction bumps on
+// its back) on the right.
 if ($preview) {
     $fa = 1; $fs = 0.2; $fn = 64;
     color("SteelBlue") clip();
