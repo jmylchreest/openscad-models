@@ -8,6 +8,7 @@ Parametric OpenSCAD models and the libraries I wrote to support them.
 |---|---|
 | [ikea-skadis](./libraries/ikea-skadis.md) | IKEA SKÅDIS pegboard primitives — surface-agnostic peg + staggered-grid placer matching the real two-grid 40 × 20 mm layout, 5 × 15 mm slots, 5.5 mm panel. Every mechanical dimension is overridable per call. MIT. |
 | [container](./libraries/container.md) | Generic box with per-face layered styles (solid / hex / grid) and arbitrary cuts. Drop-in `insert()` reads the container's outer dimensions so the two stay in sync. MIT. |
+| [modular-clip](./libraries/modular-clip.md) | Parametric spring edge-clip + standardised dovetail connector. Any clip mates with any holder — vary the clip body and holder geometry independently, the dovetail interface stays fixed. MIT. |
 
 ## Models
 
@@ -36,5 +37,5 @@ miscellaneous references are in [RESOURCES.md](./RESOURCES.md).
 
 ## License
 
-My modules under `libraries/ikea-skadis/` and `libraries/container/` are MIT.
-Submodules retain their upstream licenses.
+My modules under `libraries/ikea-skadis/`, `libraries/container/`, and
+`libraries/modular-clip/` are MIT. Submodules retain their upstream licenses.
