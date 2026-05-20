@@ -43,9 +43,13 @@ all_spacing = 25;
 
 // 2D side profile of the L-hook in the YZ plane. Origin at the corner
 // where the shaft meets the back plate; +Y forward, +Z upward.
+// Fillet is clamped to (shaft thickness − 0.5 mm) / 2 so the offsets
+// don't erode away thin features when the user asks for a large fillet.
 module _hook_profile_2d() {
-    offset(r =  hook_fillet) offset(r = -hook_fillet)
-        offset(r = -hook_fillet) offset(r =  hook_fillet)
+    f = min(hook_fillet,
+            (min(hook_shaft_t, hook_tip_t) - 0.5) / 2);
+    offset(r = -f) offset(r = f)
+        offset(r = f) offset(r = -f)
             polygon([
                 [0,                       0],
                 [hook_shaft_l,            0],
