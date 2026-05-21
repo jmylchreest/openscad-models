@@ -27,23 +27,25 @@ tag_recess_h    = 0.4;    // recess depth (≈ sticker thickness)
 
 /* [Disc — visible face on the outside of the spool] */
 disc_d          = 30;     // overall disc diameter
-disc_t          = 1.2;    // total disc thickness (6 layers at 0.2 mm)
-disc_chamfer    = 0.4;    // edge chamfer (2 layers at 0.2 mm — prints cleaner than 1)
+disc_t          = 1.2;    // total disc thickness (12 layers at 0.1 mm)
+disc_chamfer    = 0.2;    // edge chamfer (2 layers at 0.1 mm)
 
 /* [Clips — shared cross-section across both variants] */
 // Defaults for a Bambu spool side hole: 2.5 mm at the mouth, 2.8 mm
 // inside, 3 mm deep. The post slides through the 2.5 mm mouth, the
 // barb pops into the 2.8 mm chamber and the mouth pinches behind it.
 //
-// Sizes are picked so every wall and gap is a clean multiple of the
-// 0.4 mm extrusion width: slit = 0.8 mm (2 lines), post halves =
-// (2.4 − 0.8) / 2 = 0.8 mm (2 lines), no awkward fractional lines.
-// Print with Arachne / variable-line-width enabled if your slicer
-// supports it (PrusaSlicer, OrcaSlicer, recent Cura).
+// Sizes are tuned for a 0.2 mm nozzle running 0.1 mm layer height —
+// every wall and gap is a clean multiple of the 0.2 mm extrusion
+// width: slit = 0.4 mm (2 lines), post halves = (2.4 − 0.4) / 2 =
+// 1.0 mm (5 lines, very solid). Original 0.4 mm-nozzle values
+// (0.8 mm slit, 0.8 mm halves) tend to fill in or smear on a
+// 0.4 mm nozzle — printable but inconsistent. A 0.2 mm nozzle prints
+// these features cleanly.
 clip_post_d     = 2.4;    // post diameter (passes the 2.5 mm mouth with 0.1 mm/side play)
 clip_barb_d     = 2.8;    // barb base diameter (sits in the 2.8 mm chamber)
 clip_spacing    = 4.5;    // centre-to-centre distance between the two clips
-clip_slit_w     = 0.8;    // slit width through the post — gives the snap-fit flex
+clip_slit_w     = 0.4;    // slit width — 2 extrusion widths on a 0.2 mm nozzle
 
 /* [Outside-variant clip] */
 // Short clip — the barb only needs to clear the spool hole's 2.5 mm
