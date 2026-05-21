@@ -1,0 +1,23 @@
+{
+    "_about": "OrcaSlicer / Bambu Studio process profile tuned for the bambu-rfid-tag holder. Import in Process Settings → 'Import preset…'. Inherits from the stock '0.10mm Standard @BBL X1C 0.2 nozzle'; change the `inherits` field if you're on a different Bambu printer (P1S, A1, etc.) or a different nozzle size. Filament-side recommendations (temp, fan) are in print-profile.md alongside this file.",
+    "type": "process",
+    "name": "0.10mm RFID Tag Holder",
+    "inherits": "0.10mm Standard @BBL X1C 0.2 nozzle",
+    "from": "User",
+    "instantiation": "true",
+    "wall_loops": "3",
+    "bottom_shell_layers": "5",
+    "top_shell_layers": "5",
+    "sparse_infill_density": "100%",
+    "sparse_infill_pattern": "concentric",
+    "outer_wall_speed": ["30"],
+    "inner_wall_speed": ["50"],
+    "top_surface_speed": ["30"],
+    "initial_layer_speed": ["20"],
+    "initial_layer_infill_speed": ["50"],
+    "skirt_loops": "2",
+    "wall_generator": "arachne",
+    "wall_transition_length": "0.4",
+    "elefant_foot_compensation": "0.1",
+    "detect_thin_wall": "1"
+}
