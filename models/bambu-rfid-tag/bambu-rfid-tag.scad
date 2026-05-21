@@ -18,7 +18,7 @@
 //             through the spool side wall and the barb catches on the
 //             outside (~3.2 mm clip total).
 // `all`     — both variants side-by-side on the X axis for slicing.
-render_target = "outside";  // [outside, inside, all]
+render_target = "all";  // [outside, inside, all]
 
 /* [RFID sticker] */
 tag_d           = 25.5;   // sticker diameter
@@ -27,30 +27,36 @@ tag_recess_h    = 0.4;    // recess depth (≈ sticker thickness)
 
 /* [Disc — visible face on the outside of the spool] */
 disc_d          = 30;     // overall disc diameter
-disc_t          = 0.6;    // total disc thickness (thin — 3 layers at 0.2 mm)
-disc_chamfer    = 0.3;    // small edge chamfer on the visible face (cosmetic)
+disc_t          = 1.2;    // total disc thickness (6 layers at 0.2 mm)
+disc_chamfer    = 0.4;    // edge chamfer (2 layers at 0.2 mm — prints cleaner than 1)
 
 /* [Clips — shared cross-section across both variants] */
 // Defaults for a Bambu spool side hole: 2.5 mm at the mouth, 2.8 mm
 // inside, 3 mm deep. The post slides through the 2.5 mm mouth, the
 // barb pops into the 2.8 mm chamber and the mouth pinches behind it.
-clip_post_d     = 2.3;    // post diameter (passes the 2.5 mm mouth with 0.1 mm/side play)
-clip_barb_d     = 2.7;    // barb base diameter (sits in the 2.8 mm chamber)
+//
+// Sizes are picked so every wall and gap is a clean multiple of the
+// 0.4 mm extrusion width: slit = 0.8 mm (2 lines), post halves =
+// (2.4 − 0.8) / 2 = 0.8 mm (2 lines), no awkward fractional lines.
+// Print with Arachne / variable-line-width enabled if your slicer
+// supports it (PrusaSlicer, OrcaSlicer, recent Cura).
+clip_post_d     = 2.4;    // post diameter (passes the 2.5 mm mouth with 0.1 mm/side play)
+clip_barb_d     = 2.8;    // barb base diameter (sits in the 2.8 mm chamber)
 clip_spacing    = 4.5;    // centre-to-centre distance between the two clips
 clip_slit_w     = 0.8;    // slit width through the post — gives the snap-fit flex
 
 /* [Outside-variant clip] */
 // Short clip — the barb only needs to clear the spool hole's 2.5 mm
 // surface mouth, so the whole post + barb fits in well under 1 mm.
-outside_clip_post_l = 0.5;  // straight post before the barb starts
-outside_clip_barb_h = 0.5;  // cone height for the barb
+outside_clip_post_l = 0.6;  // straight post before the barb starts
+outside_clip_barb_h = 0.6;  // cone height for the barb
 
 /* [Inside-variant clip] */
 // Long clip — the post passes through the full ~3 mm thickness of the
 // spool side wall, with a tiny barb that pops out the other side and
 // catches on the 2.5 mm mouth from the outside.
-inside_clip_post_l  = 3.0;  // length of the straight post (≈ spool wall thickness)
-inside_clip_barb_h  = 0.2;  // small barb height — minimal protrusion on the outer face
+inside_clip_post_l  = 3.2;  // length of the straight post (≈ spool wall thickness)
+inside_clip_barb_h  = 0.6;  // small barb height — minimal protrusion on the outer face
 
 /* [Quality] */
 $fa = $preview ? $fa : 1;
