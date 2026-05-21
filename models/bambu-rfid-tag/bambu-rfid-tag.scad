@@ -18,7 +18,7 @@
 //             through the spool side wall and the barb catches on the
 //             outside (~3.2 mm clip total).
 // `all`     — both variants side-by-side on the X axis for slicing.
-render_target = "all";  // [outside, inside, all]
+render_target = "outside";  // [outside, inside, all]
 
 /* [RFID sticker] */
 tag_d           = 25.5;   // sticker diameter
@@ -47,10 +47,22 @@ clip_barb_d     = 2.8;    // barb base diameter (sits in the 2.8 mm chamber)
 clip_spacing    = 4.5;    // centre-to-centre distance between the two clips
 clip_slit_w     = 0.4;    // slit width — 2 extrusion widths on a 0.2 mm nozzle
 
+// Stress-relief flare at the disc-side base of each post. FDM-printed
+// posts tend to snap off at the first layer (where post layer 1 bonds
+// to disc layer N — the weakest inter-layer bond). The flare widens the
+// post over its first `clip_base_flare_h` mm by `clip_base_flare` mm of
+// extra radius — more bonded area at the junction + a gentler stress
+// transition than a 90° corner. The slit cuts through the flare too so
+// the halves still flex on insertion. The wider base compresses through
+// the 2.5 mm mouth on insertion (needs ≤ slit_w / 2 of compression per
+// side; default flare = 0.15 mm/side, well within the 0.2 mm budget).
+clip_base_flare   = 0.15;  // extra radius added at the post base (0 = off)
+clip_base_flare_h = 0.5;   // height over which the flare tapers down to clip_post_d
+
 /* [Outside-variant clip] */
 // Short clip — the barb only needs to clear the spool hole's 2.5 mm
 // surface mouth, so the whole post + barb fits in well under 1 mm.
-outside_clip_post_l = 0.6;  // straight post before the barb starts
+outside_clip_post_l = 1.2;  // straight post before the barb starts
 outside_clip_barb_h = 0.6;  // cone height for the barb
 
 /* [Inside-variant clip] */
@@ -72,22 +84,37 @@ $fn = 64;
 // through the spool hole's narrower mouth. Origin at the base of the
 // post (Z=0 sits on the disc's back face), post grows in +Z.
 module _clip(post_l, barb_h) {
+    // Effective flare values, clamped so a short post doesn't end up
+    // all flare with no straight section.
+    flare    = max(0, clip_base_flare);
+    flare_h  = (clip_base_flare_h > 0 && flare > 0)
+                  ? min(clip_base_flare_h, post_l - 0.1)
+                  : 0;
+    straight_l = post_l - flare_h;
+
     difference() {
         union() {
-            // Straight cylindrical post
-            cylinder(d = clip_post_d, h = post_l);
+            // Flared base (stress relief at the disc-post junction).
+            if (flare_h > 0)
+                cylinder(d1 = clip_post_d + 2 * flare,
+                         d2 = clip_post_d,
+                         h  = flare_h);
+            // Straight cylindrical post above the flare.
+            translate([0, 0, flare_h])
+                cylinder(d = clip_post_d, h = straight_l);
             // Conical barb — wide where it meets the post, narrow at the tip
             translate([0, 0, post_l])
                 cylinder(d1 = clip_barb_d, d2 = clip_post_d * 0.7,
                          h = barb_h);
         }
-        // Slit cuts through the post + barb along the Y axis so the two
-        // halves can compress inward to clear the 2.5 mm mouth.
+        // Slit cuts through the post + barb (and the flare) along the
+        // Y axis so the two halves can compress inward to clear the
+        // 2.5 mm mouth.
         translate([-clip_slit_w / 2,
-                   -clip_barb_d / 2 - 0.5,
+                   -(clip_barb_d / 2 + flare + 0.5),
                    -0.01])
             cube([clip_slit_w,
-                  clip_barb_d + 1,
+                  clip_barb_d + 2 * flare + 1,
                   post_l + barb_h + 0.02]);
     }
 }
