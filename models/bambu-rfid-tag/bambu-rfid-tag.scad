@@ -18,8 +18,8 @@ tag_recess_h    = 0.4;    // recess depth (≈ sticker thickness)
 
 /* [Disc — visible face on the outside of the spool] */
 disc_d          = 30;     // overall disc diameter
-disc_t          = 1.2;    // total disc thickness (thin)
-disc_chamfer    = 0.4;    // small edge chamfer on the visible face (cosmetic)
+disc_t          = 0.8;    // total disc thickness (thin — 4 layers at 0.2 mm)
+disc_chamfer    = 0.3;    // small edge chamfer on the visible face (cosmetic)
 
 /* [Clips — snap-fit posts that engage two adjacent spool holes] */
 // Defaults for a Bambu spool side hole: 2.5 mm at the mouth, 2.8 mm
