@@ -1,24 +1,23 @@
-// oralb-caddy — parametric stadium-prism caddy for Oral-B electric
+// oralb-caddy — parametric stadium-RING caddy for Oral-B electric
 // toothbrushes, replacement brush heads, and a toothpaste tube. The
-// caddy is a solid oval (stadium-prism) block; brushes drop in through
-// vertical slot tunnels in the top. Each slot type carries its own
-// diameter, floor thickness and peg — "body" (through-hole + small
-// charging-recess peg), "head" (shallow recess + tall retention peg)
-// or "toothpaste" (through-hole). Four splay-able tapered feet glue
-// into keyed sockets on the bottom face.
+// caddy is a HOLLOW oval (stadium ring) — open through its depth so
+// the brushes are visible inside the frame. The outer profile in the
+// front view is a stadium; the inner hollow is a smaller stadium with
+// a uniform `wall_t` rim around it. Brushes drop in through holes in
+// the top strip and stand inside the hollow, resting on the bottom
+// strip (or on a peg). Four splay-able tapered feet glue into keyed
+// sockets on the bottom face.
 //
 // Coordinates are USE ORIENTATION:
 //   X — width  (long axis of the stadium silhouette, left ↔ right)
-//   Y — depth  (front ↔ back, the extrusion axis)
+//   Y — depth  (front ↔ back, the open-through direction)
 //   Z — height (vertical, brushes stand UP through Z)
 // The OUTER SHAPE is a stadium PRISM:
-//   - 2D stadium drawn in XZ (caddy_w × caddy_h) — this is the front
-//     silhouette you actually see when the caddy is on the counter
+//   - 2D stadium drawn in XZ (caddy_w × caddy_h) — front silhouette
 //   - extruded along Y by caddy_d
 //   - corner_r = caddy_h/2 gives the full oval; less = rounded rectangle
-// Slot tunnels still go through Z — the brushes drop in from the top
-// through the flat top strip of the stadium and rest on (or sit on a
-// peg in) the slot floor.
+// The INNER HOLLOW is a smaller stadium prism extruded clear THROUGH
+// Y, so the front and back are open and you can see the brushes.
 //
 // Author: John Mylchreest <jmylchreest@gmail.com>. MIT licensed.
 
@@ -41,31 +40,35 @@ slot_rows = [["body", "toothpaste", "body"]];
 
 /* [Caddy frame — the stadium-prism block] */
 caddy_w   = 175;  // X — long axis of the stadium silhouette
-caddy_h   = 50;   // Z — short axis of the stadium (visible height)
-caddy_d   = 60;   // Y — extrusion depth (front-to-back)
-corner_r  = 25;   // outer corner radius in XZ (caddy_h/2 = full oval)
+caddy_h   = 55;   // Z — short axis of the stadium (visible height)
+caddy_d   = 60;   // Y — extrusion depth (front-to-back, open through)
+corner_r  = 27;   // outer corner radius in XZ (caddy_h/2 = full oval)
+wall_t    = 6;    // uniform thickness of the ring's top/bottom/end-cap walls
 
 /* [Body slot — Oral-B brush body] */
-// Bodies are ~28 mm — 30 mm hole gives ~1 mm clearance per side. A 3 mm
-// floor under the brush stops it falling through; a tiny peg engages
-// the brush's charging-contact recess.
+// Bodies are ~28 mm — 30 mm hole gives ~1 mm clearance per side. The
+// brush passes through the top hole into the hollow interior and
+// stands on the bottom strip; a small peg engages the charging recess.
 body_hole_d   = 30;
-body_floor_h  = 3;    // solid floor thickness under the brush (0 = through-hole)
-body_peg_d    = 3.0;  // small peg into the brush's charging recess
+body_through  = false;  // true = also punch the bottom strip (pass-through)
+body_peg_d    = 3.0;    // small peg into the brush's charging recess
 body_peg_h    = 2.0;
 
 /* [Head slot — Oral-B replacement brush head] */
-// Heads have a hollow shaft ~5 mm Ø; a 4 mm peg gives a snug fit. A
-// thicker floor (10 mm) keeps the peg base stable.
+// Heads have a hollow shaft ~5 mm Ø; a 4 mm peg gives a snug fit. Top
+// hole sized for the head's body so the bristles sit just above the
+// caddy with the shaft engaged on the peg from below.
 head_hole_d   = 14;
-head_floor_h  = 10;
+head_through  = false;
 head_peg_d    = 4.0;
-head_peg_h    = 25;   // tall — fills the head's hollow shaft
+head_peg_h    = 25;     // long — fills the head's hollow shaft
 
 /* [Toothpaste slot] */
-// Pass-through so the tube rests on the counter underneath.
+// Tube enters through the top hole and rests on the bottom strip.
+// Set toothpaste_through = true if you'd rather the tube cap hangs out
+// the bottom (resting on the counter).
 toothpaste_hole_d   = 32;
-toothpaste_floor_h  = 0;   // 0 = through-hole
+toothpaste_through  = false;
 toothpaste_peg_d    = 0;
 toothpaste_peg_h    = 0;
 
@@ -125,11 +128,11 @@ function _slot_hole_d(t)  =
     : t == "toothpaste" ? toothpaste_hole_d
     :                     0;
 
-function _slot_floor_h(t) =
-      t == "body"       ? body_floor_h
-    : t == "head"       ? head_floor_h
-    : t == "toothpaste" ? toothpaste_floor_h
-    :                     0;
+function _slot_through(t) =
+      t == "body"       ? body_through
+    : t == "head"       ? head_through
+    : t == "toothpaste" ? toothpaste_through
+    :                     false;
 
 function _slot_peg_d(t)   =
       t == "body"       ? body_peg_d
@@ -188,25 +191,37 @@ module _outer_solid() {
                 rounded_rect_2d(caddy_w, caddy_h, corner_r);
 }
 
-// Through/recess cylinders for every slot. floor_h == 0 → through-hole;
-// floor_h > 0 → recess only, with `floor_h` of solid material below.
+// Inner hollow — smaller stadium prism extruded clear through Y so the
+// ring is open at both ends. Inset by wall_t on all sides; if corner_r
+// shrinks below 0.1 mm the inner falls back to a sharp-cornered rect.
+module _inner_hollow() {
+    inner_w = caddy_w - 2 * wall_t;
+    inner_h = caddy_h - 2 * wall_t;
+    inner_r = max(0.1, corner_r - wall_t);
+    translate([0, 0, caddy_h / 2])
+        rotate([-90, 0, 0])
+            linear_extrude(height = caddy_d + 2, center = true)
+                rounded_rect_2d(inner_w, inner_h, inner_r);
+}
+
+// Slot subtractions punch through the TOP strip (and optionally the
+// BOTTOM strip if the slot is set to be a pass-through). The inner
+// hollow already takes care of the empty space between the two strips.
 module _slot_subtractions() {
     for (j = [0 : num_rows - 1])
         for (i = [0 : len(slot_rows[j]) - 1]) {
             t = slot_rows[j][i];
             p = _slot_xy(i, j);
             hole_d = _slot_hole_d(t);
-            floor  = _slot_floor_h(t);
+            thru   = _slot_through(t);
             if (hole_d > 0) {
-                if (floor <= 0) {
-                    // Through-hole.
+                // Top strip cut.
+                translate([p[0], p[1], caddy_h - wall_t - 0.01])
+                    cylinder(d = hole_d, h = wall_t + 0.02);
+                // Bottom strip cut, only if this slot is set pass-through.
+                if (thru)
                     translate([p[0], p[1], -0.01])
-                        cylinder(d = hole_d, h = caddy_h + 0.02);
-                } else {
-                    // Top recess down to z = floor.
-                    translate([p[0], p[1], floor])
-                        cylinder(d = hole_d, h = caddy_h - floor + 0.01);
-                }
+                        cylinder(d = hole_d, h = wall_t + 0.02);
             }
         }
 }
@@ -232,9 +247,9 @@ module _socket(x_sign, y_sign, rot) {
             }
 }
 
-// Additive features: bottom-sitting pegs (head retention, body
-// charging recess). Only emitted where the slot has a solid floor for
-// the peg to attach to.
+// Additive features: pegs rising from the INSIDE face of the bottom
+// strip (Z = wall_t) up into the hollow. Skipped on pass-through slots
+// since the bottom strip is punched out there.
 module _slot_additions() {
     for (j = [0 : num_rows - 1])
         for (i = [0 : len(slot_rows[j]) - 1]) {
@@ -242,9 +257,9 @@ module _slot_additions() {
             p = _slot_xy(i, j);
             peg_d = _slot_peg_d(t);
             peg_h = _slot_peg_h(t);
-            floor = _slot_floor_h(t);
-            if (peg_d > 0 && peg_h > 0 && floor > 0)
-                translate([p[0], p[1], floor])
+            thru  = _slot_through(t);
+            if (peg_d > 0 && peg_h > 0 && !thru)
+                translate([p[0], p[1], wall_t])
                     cylinder(d = peg_d, h = peg_h);
         }
 }
@@ -253,6 +268,7 @@ module caddy() {
     union() {
         difference() {
             _outer_solid();
+            _inner_hollow();
             _slot_subtractions();
             // Four sockets — one per foot — with notch slots oriented to
             // each foot's installation rotation.
