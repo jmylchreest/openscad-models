@@ -48,11 +48,15 @@ wall_t    = 6;    // uniform thickness of the ring's top/bottom/end-cap walls
 /* [Body slot — Oral-B brush body] */
 // Bodies are ~28 mm — 30 mm hole gives ~1 mm clearance per side. The
 // brush passes through the top hole into the hollow interior and
-// stands on the bottom strip; a small peg engages the charging recess.
+// stands on the bottom strip. The peg matches a standard Oral-B
+// charging-dock spigot (the bump in the middle of the charging base):
+// nominally 11 mm Ø × 6 mm tall, with the brush's charging recess
+// sliding down over it. The original Printables 3MF (393824) just uses
+// a flat floor with no peg — set body_peg_d = 0 to match.
 body_hole_d   = 30;
 body_through  = false;  // true = also punch the bottom strip (pass-through)
-body_peg_d    = 3.0;    // small peg into the brush's charging recess
-body_peg_h    = 2.0;
+body_peg_d    = 11.0;   // ≈ Oral-B charging-dock spigot
+body_peg_h    = 6.0;
 
 /* [Head slot — Oral-B replacement brush head] */
 // Heads have a hollow shaft ~5 mm Ø; a 4 mm peg gives a snug fit. Top
