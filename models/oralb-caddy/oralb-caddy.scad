@@ -56,19 +56,20 @@ wall_t    = 6;    // uniform thickness of the ring's top/bottom/end-cap walls
 // brush passes through the top hole into the hollow interior and
 // stands on the bottom strip. The peg engages the small alignment
 // recess on the brush's underside. Measured off Printables 279981's
-// STL, that peg is a TOMBSTONE / D-shape — one end rounded, the other
-// end flat — extruded straight up (no vertical taper). The asymmetric
-// shape keys the brush rotationally so the front face always lines up
-// the same way.
-//   body_peg_l → length along the peg's LONG axis (rounded end to flat end)
-//   body_peg_w → width across the peg (also = diameter of the rounded end)
-//   body_peg_h → vertical height (no taper)
-// Set body_peg_l == body_peg_w for a plain round peg.
-body_hole_d  = 30;
-body_through = false;  // true = also punch the bottom strip (pass-through)
-body_peg_l   = 9.0;
-body_peg_w   = 4.0;
-body_peg_h   = 8.0;
+// STL, that peg is a TOMBSTONE / D-shape (one end rounded, the other
+// end flat) that narrows linearly from base to top — the asymmetric
+// cross-section keys the brush rotationally and the taper makes the
+// brush easy to drop on.
+//   body_peg_l → length along the peg's LONG axis (rounded ↔ flat ends)
+//   body_peg_w → width across (also = diameter of the rounded end)
+//   body_peg_h → vertical height
+//   body_peg_taper → top-face size as a fraction of the base (1.0 = no taper)
+body_hole_d    = 30;
+body_through   = false;  // true = also punch the bottom strip (pass-through)
+body_peg_l     = 9.0;
+body_peg_w     = 4.0;
+body_peg_h     = 8.0;
+body_peg_taper = 0.7;
 
 /* [Head slot — Oral-B replacement brush head] */
 // Heads have a hollow shaft ~5 mm Ø; a 4 mm peg gives a snug fit. Top
@@ -175,6 +176,10 @@ function _slot_peg_h(t)   =
     : t == "head"       ? head_peg_h
     : t == "toothpaste" ? toothpaste_peg_h
     :                     0;
+
+function _slot_peg_taper(t) =
+      t == "body" ? body_peg_taper
+    :              1.0;
 
 // ---- derived ----
 num_rows = len(slot_rows);
@@ -323,14 +328,14 @@ module _d_shape_2d(l, w) {
 }
 
 // Peg standing at the origin, axis along +Z. l = long axis at the base,
-// w = short axis. When l == w the peg becomes a round cylinder (which
-// is what head + toothpaste pegs are); otherwise the cross-section is
-// the D-shape above, extruded straight up (no vertical taper).
-module _peg(l, w, h) {
-    if (l == w)
+// w = short axis at the base, h = height, taper = top size as a fraction
+// of the base (1.0 = straight sides, < 1.0 narrows toward the top).
+// When l == w and taper == 1 the peg becomes a plain round cylinder.
+module _peg(l, w, h, taper) {
+    if (l == w && taper == 1.0)
         cylinder(d = w, h = h);
     else
-        linear_extrude(height = h)
+        linear_extrude(height = h, scale = taper)
             _d_shape_2d(l, w);
 }
 
@@ -342,10 +347,11 @@ module _slot_additions() {
             pl = _slot_peg_l(t);
             pw = _slot_peg_w(t);
             ph = _slot_peg_h(t);
+            tp = _slot_peg_taper(t);
             thru = _slot_through(t);
             if (pw > 0 && ph > 0 && !thru)
                 translate([p[0], p[1], wall_t])
-                    _peg(pl, pw, ph);
+                    _peg(pl, pw, ph, tp);
         }
 }
 
