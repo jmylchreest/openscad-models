@@ -36,7 +36,7 @@ render_target = "all";  // [caddy, feet, all, assembled]
 //   2 rows (heads in front, brushes + paste in back):
 //     slot_rows = [["head", "head", "head"],
 //                  ["body", "toothpaste", "body"]];
-slot_rows = [["body", "toothpaste", "body"]];
+slot_rows = [["body", "toothpaste", "body"], ["toothpaste"]];
 
 /* [Caddy frame — the stadium-prism block] */
 caddy_w   = 175;  // X — long axis of the stadium silhouette
@@ -75,6 +75,12 @@ toothpaste_peg_h    = 0;
 /* [Slot positions] */
 slot_spacing_x = 55;  // distance between slot centres along X
 slot_spacing_y = 30;  // distance between rows along Y (matters for ≥2 rows)
+// How a short row aligns under the longest one. With slot_rows =
+// [["x","x","x"], ["x","x"]] and row_align = "center", the front 2
+// slots sit offset between the back 3 (default). "left" aligns the
+// short row's first column with the long row's first column;
+// "right" aligns the last columns instead.
+row_align      = "center";  // [center, left, right]
 
 /* [Feet — splay-able tapered cones with adhesive-foot recess] */
 // Each foot is a truncated cone, narrow at the bottom and wide at the
@@ -89,16 +95,18 @@ feet_rim_t            = 0.4;  // flange flaring out around the recess
 
 /* [Foot ↔ caddy joint] */
 // Caddy bottom carries four cylindrical sockets, each with a small
-// rectangular keying notch. The foot's top is sized for the cylindrical
-// part (with feet_socket_clear total play); a matching notch on the
-// foot's top wedges into the socket's slot. This rotationally aligns
-// the foot (so a tilted foot lands at the right angle) and gives the
-// glue a mechanical key as well as adhesive bond.
-feet_socket_h         = 3;    // socket depth (foot insertion length)
-feet_socket_clear     = 0.5;  // total Ø clearance — socket Ø = feet_top_d + this
-feet_notch_w          = 1.5;  // tangential width of the notch
-feet_notch_d          = 1.0;  // radial depth (how far the notch protrudes)
-feet_notch_clear      = 0.4;  // extra clearance around the socket-side slot
+// rectangular keying notch. The notches on the caddy ALL point in the
+// same direction (`feet_socket_notch_angle`, default 90° = +Y = toward
+// the back of the caddy) so the keying is a consistent "this side
+// faces back" indicator. Each printed foot carries its notch at a
+// per-corner offset so that, when the foot rotates to its installed
+// angle, its notch lands on the back-facing socket slot.
+feet_socket_h            = 3;    // socket depth (foot insertion length)
+feet_socket_clear        = 0.5;  // total Ø clearance — socket Ø = feet_top_d + this
+feet_notch_w             = 1.5;  // tangential width of the notch
+feet_notch_d             = 1.0;  // radial depth (how far the notch protrudes)
+feet_notch_clear         = 0.4;  // extra clearance around the socket-side slot
+feet_socket_notch_angle  = 90;   // world angle for every socket's notch slot
 
 /* [Foot layout] */
 // Four feet sit at the four corners of the caddy's *flat* bottom strip
@@ -150,8 +158,18 @@ function _slot_peg_h(t)   =
 num_rows = len(slot_rows);
 max_cols = max([for (row = slot_rows) len(row)]);
 
+// X offset applied to the whole row to honour `row_align`. The row's
+// own column index then steps in `slot_spacing_x` from there.
+function _row_x_offset(row) =
+    let (n = len(slot_rows[row]))
+      row_align == "center" ? -(n - 1) * slot_spacing_x / 2
+    : row_align == "left"   ? -(max_cols - 1) * slot_spacing_x / 2
+    : row_align == "right"  ?  (max_cols - 1) * slot_spacing_x / 2
+                                - (n - 1) * slot_spacing_x
+                            : -(n - 1) * slot_spacing_x / 2;
+
 function _slot_xy(col, row) = [
-    col * slot_spacing_x - (max_cols - 1) * slot_spacing_x / 2,
+    col * slot_spacing_x + _row_x_offset(row),
     row * slot_spacing_y - (num_rows - 1) * slot_spacing_y / 2
 ];
 
@@ -226,22 +244,19 @@ module _slot_subtractions() {
         }
 }
 
-// Cylindrical socket + rectangular notch slot, at one corner, oriented
-// by the foot's installation rotation so the foot's notch lines up.
-// The socket cuts up from Z = 0 (the caddy bottom face) into the prism
-// by feet_socket_h.
-module _socket(x_sign, y_sign, rot) {
+// Cylindrical socket + rectangular notch slot, at one corner. All four
+// sockets share the same notch direction (`feet_socket_notch_angle`),
+// so the bottom of the caddy reads consistently regardless of how the
+// feet are rotated when installed.
+module _socket(x_sign, y_sign) {
     p = _foot_xy(x_sign, y_sign);
     cavity_d = feet_top_d + feet_socket_clear;
     slot_w   = feet_notch_w + feet_notch_clear;
     slot_d   = feet_notch_d + feet_notch_clear / 2;
     translate([p[0], p[1], -0.01])
-        rotate([0, 0, rot])
+        rotate([0, 0, feet_socket_notch_angle])
             union() {
                 cylinder(d = cavity_d, h = feet_socket_h + 0.01);
-                // Notch slot — extends radially outward from the cavity
-                // wall at angle 0 (foot-local +X). Starts slightly inside
-                // the cylinder so the two unions overlap cleanly.
                 translate([cavity_d / 2 - 0.5, -slot_w / 2, 0])
                     cube([slot_d + 0.5, slot_w, feet_socket_h + 0.01]);
             }
@@ -270,13 +285,12 @@ module caddy() {
             _outer_solid();
             _inner_hollow();
             _slot_subtractions();
-            // Four sockets — one per foot — with notch slots oriented to
-            // each foot's installation rotation.
-            D = feet_rotation_delta;
-            _socket(-1, +1,        -D);  // BL
-            _socket(+1, +1,        +D);  // BR
-            _socket(-1, -1, 180 -  D);   // FL
-            _socket(+1, -1, 180 +  D);   // FR
+            // Four sockets — all share the same notch direction so the
+            // bottom face reads consistently.
+            _socket(-1, +1);  // BL
+            _socket(+1, +1);  // BR
+            _socket(-1, -1);  // FL
+            _socket(+1, -1);  // FR
         }
         _slot_additions();
     }
@@ -285,10 +299,12 @@ module caddy() {
 // ---- foot ----
 
 // One foot — truncated cone + flange + adhesive recess + keying notch
-// on the top side. The notch protrudes radially outward from the cone's
-// top edge at foot-local +X (rotation 0); when the foot is rotated for
-// installation, the notch rotates with it and engages the socket slot.
-module foot_solo() {
+// on the top side. The notch sits at `notch_offset` degrees around the
+// foot's vertical axis (default 0 = foot-local +X). At assembly time
+// each foot gets its own offset so that, after the foot rotates by R
+// to land at its corner, the notch ends up pointing at the caddy's
+// fixed `feet_socket_notch_angle` direction.
+module foot_solo(notch_offset = 0) {
     flange_d = feet_bottom_d + 2 * feet_rim_t;
     union() {
         difference() {
@@ -303,34 +319,41 @@ module foot_solo() {
             translate([0, 0, -0.01])
                 cylinder(d = feet_recess_d, h = feet_recess_h + 0.01);
         }
-        // Keying notch — top socket_h of the foot. Starts slightly
-        // inside the cone surface (-0.1 mm) so the union joins cleanly.
-        translate([feet_top_d / 2 - 0.1,
-                  -feet_notch_w / 2,
-                   feet_h - feet_socket_h])
-            cube([feet_notch_d + 0.1, feet_notch_w, feet_socket_h]);
+        // Keying notch at the requested local angle.
+        rotate([0, 0, notch_offset])
+            translate([feet_top_d / 2 - 0.1,
+                      -feet_notch_w / 2,
+                       feet_h - feet_socket_h])
+                cube([feet_notch_d + 0.1, feet_notch_w, feet_socket_h]);
     }
 }
 
-// Four feet, side-by-side on the bed for printing (no tilt).
+// Four feet, side-by-side on the bed for printing. Each carries the
+// notch position that lets it install at one specific corner — the
+// notches point in four different directions on the bed but all end up
+// pointing the same way (toward the caddy's back) once installed.
 module feet_for_print() {
     flange_d = feet_bottom_d + 2 * feet_rim_t;
     spacing  = max(feet_top_d + feet_notch_d, flange_d) + 4;
+    D = feet_rotation_delta;
+    rots = [-D, +D, 180 - D, 180 + D];  // BL, BR, FL, FR
     for (i = [0 : 3])
         translate([(i - 1.5) * spacing, 0, 0])
-            foot_solo();
+            foot_solo(feet_socket_notch_angle - rots[i]);
 }
 
 // Place one foot under a corner of the caddy, tilted by `tilt` around
 // the local outward axis (after Z-rotation by `rot`). The foot's TOP
-// inserts into the caddy socket at Z = 0..feet_socket_h.
+// inserts into the caddy socket at Z = 0..feet_socket_h. The notch
+// offset is chosen so the notch lands at the caddy's fixed socket
+// notch direction after the foot's own rotation.
 module _foot_at_corner(x_sign, y_sign, tilt, rot) {
     p = _foot_xy(x_sign, y_sign);
     translate([p[0], p[1], 0])
         rotate([0, 0, rot])
             rotate([0, tilt, 0])
                 translate([0, 0, feet_socket_h - feet_h])
-                    foot_solo();
+                    foot_solo(feet_socket_notch_angle - rot);
 }
 
 // All four feet at the splayed positions (visualisation only).
