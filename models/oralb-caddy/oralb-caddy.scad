@@ -55,14 +55,19 @@ wall_t    = 6;    // uniform thickness of the ring's top/bottom/end-cap walls
 // Bodies are ~28 mm — 30 mm hole gives ~1 mm clearance per side. The
 // brush passes through the top hole into the hollow interior and
 // stands on the bottom strip. The peg engages the small alignment
-// recess on the brush's underside (NOT the big charging-dock spigot
-// recess — that's on the dock side, not the brush). The visible pegs
-// on Printables 279981 measure roughly 6 mm Ø × 10 mm tall; values
-// match Oral-B Pro / Vitality / iO bodies.
-body_hole_d   = 30;
-body_through  = false;  // true = also punch the bottom strip (pass-through)
-body_peg_d    = 6.0;    // fits the brush base's centre recess
-body_peg_h    = 10.0;
+// recess on the brush's underside; on Printables 279981 you can see
+// the peg is an OBLONG, slightly TAPERED nub (not a round cylinder) —
+// wider in X than in Y at the base and narrowing toward the tip.
+//   body_peg_w → diameter along X at the base (caddy's long axis)
+//   body_peg_d → diameter along Y at the base (caddy's depth)
+//   body_peg_taper → top dimensions as a fraction of the base (1.0 = no taper)
+// Set body_peg_w == body_peg_d for a round peg.
+body_hole_d    = 30;
+body_through   = false;  // true = also punch the bottom strip (pass-through)
+body_peg_w     = 7.0;    // along X at base
+body_peg_d     = 5.0;    // along Y at base
+body_peg_h     = 10.0;
+body_peg_taper = 0.75;
 
 /* [Head slot — Oral-B replacement brush head] */
 // Heads have a hollow shaft ~5 mm Ø; a 4 mm peg gives a snug fit. Top
@@ -152,6 +157,12 @@ function _slot_through(t) =
     : t == "toothpaste" ? toothpaste_through
     :                     false;
 
+function _slot_peg_w(t)   =
+      t == "body"       ? body_peg_w
+    : t == "head"       ? head_peg_d
+    : t == "toothpaste" ? toothpaste_peg_d
+    :                     0;
+
 function _slot_peg_d(t)   =
       t == "body"       ? body_peg_d
     : t == "head"       ? head_peg_d
@@ -163,6 +174,10 @@ function _slot_peg_h(t)   =
     : t == "head"       ? head_peg_h
     : t == "toothpaste" ? toothpaste_peg_h
     :                     0;
+
+function _slot_peg_taper(t) =
+      t == "body"       ? body_peg_taper
+    :                     1.0;
 
 // ---- derived ----
 num_rows = len(slot_rows);
@@ -251,10 +266,15 @@ module _inner_hollow() {
                 rounded_rect_2d(inner_w, inner_h, inner_r);
 }
 
-// Slot subtractions punch through the TOP strip (and optionally the
-// BOTTOM strip if the slot is set to be a pass-through). The inner
-// hollow already takes care of the empty space between the two strips.
+// Slot subtractions cut from the caddy's vertical mid-plane UP through
+// the top, so they also slice off any inner-hollow corner curve that
+// would otherwise protrude into the slot when the slot sits near the
+// rounded ends. The lower half of the caddy (and the bottom strip) is
+// left intact for the brush to rest on — unless the slot is set
+// pass-through, in which case a mirrored cut from below clears that
+// half too.
 module _slot_subtractions() {
+    half = caddy_h / 2;
     for (j = [0 : num_rows - 1])
         for (i = [0 : len(slot_rows[j]) - 1]) {
             t = slot_rows[j][i];
@@ -262,13 +282,11 @@ module _slot_subtractions() {
             hole_d = _slot_hole_d(t);
             thru   = _slot_through(t);
             if (hole_d > 0) {
-                // Top strip cut.
-                translate([p[0], p[1], caddy_h - wall_t - 0.01])
-                    cylinder(d = hole_d, h = wall_t + 0.02);
-                // Bottom strip cut, only if this slot is set pass-through.
+                translate([p[0], p[1], half])
+                    cylinder(d = hole_d, h = half + 0.01);
                 if (thru)
                     translate([p[0], p[1], -0.01])
-                        cylinder(d = hole_d, h = wall_t + 0.02);
+                        cylinder(d = hole_d, h = half + 0.01);
             }
         }
 }
@@ -294,17 +312,32 @@ module _socket(x_sign, y_sign) {
 // Additive features: pegs rising from the INSIDE face of the bottom
 // strip (Z = wall_t) up into the hollow. Skipped on pass-through slots
 // since the bottom strip is punched out there.
+// Tapered oblong peg standing at the origin, axis along +Z.
+// w = base diameter along X, d = base diameter along Y, h = height,
+// taper = top scale factor (1.0 = no taper, 0 = come to a point).
+// Falls back to a plain cylinder when w == d and taper == 1.
+module _peg(w, d, h, taper) {
+    if (w == d && taper == 1.0)
+        cylinder(d = d, h = h);
+    else
+        linear_extrude(height = h, scale = taper)
+            scale([w / d, 1, 1])
+                circle(d = d);
+}
+
 module _slot_additions() {
     for (j = [0 : num_rows - 1])
         for (i = [0 : len(slot_rows[j]) - 1]) {
             t = slot_rows[j][i];
             p = _slot_xy(i, j);
-            peg_d = _slot_peg_d(t);
-            peg_h = _slot_peg_h(t);
-            thru  = _slot_through(t);
-            if (peg_d > 0 && peg_h > 0 && !thru)
+            pw = _slot_peg_w(t);
+            pd = _slot_peg_d(t);
+            ph = _slot_peg_h(t);
+            tp = _slot_peg_taper(t);
+            thru = _slot_through(t);
+            if (pd > 0 && ph > 0 && !thru)
                 translate([p[0], p[1], wall_t])
-                    cylinder(d = peg_d, h = peg_h);
+                    _peg(pw, pd, ph, tp);
         }
 }
 
