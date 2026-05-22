@@ -21,6 +21,8 @@
 //
 // Author: John Mylchreest <jmylchreest@gmail.com>. MIT licensed.
 
+use <../../libraries/toothbrush-pegs/toothbrush-pegs.scad>
+
 /* [Output] */
 // `all` shows the caddy + four feet on a virtual plate.
 // `assembled` shows the caddy with the feet inserted (visualisation).
@@ -314,31 +316,18 @@ module _socket(x_sign, y_sign) {
 // Additive features: pegs rising from the INSIDE face of the bottom
 // strip (Z = wall_t) up into the hollow. Skipped on pass-through slots
 // since the bottom strip is punched out there.
-// Asymmetric stadium 2D shape — hull of two circles of different Ø
-// joined by tangent lines. Centered along the long axis so the peg's
-// midpoint lands at the origin. d_back is the LARGER diameter (placed
-// at -X); d_front the smaller (placed at +X). length = back arc edge
-// to front arc edge along the long axis.
-module _asym_stadium_2d(d_back, d_front, length) {
-    sep = length - (d_back + d_front) / 2;
-    translate([-sep / 2, 0])
-        hull() {
-            circle(d = d_back);
-            translate([sep, 0]) circle(d = d_front);
-        }
-}
-
-// Oral-B body peg. Reads body_peg_* parameters, applies tolerance, and
-// extrudes the asymmetric stadium upward (with `taper` scaling the top
-// face down). Long axis aligned with world Y so the wider "back" end
-// faces the back of the caddy.
+// Oral-B body peg wrapper — pulls the body_peg_* params out of global
+// scope and hands them to the library module so the caddy and the
+// peg-fit test piece share the same geometry.
 module _oralb_body_peg() {
-    d_back  = max(0.1, body_peg_d_back  - body_peg_tolerance);
-    d_front = max(0.1, body_peg_d_front - body_peg_tolerance);
-    length  = max(d_back + d_front, body_peg_l - body_peg_tolerance);
-    rotate([0, 0, -90])
-        linear_extrude(height = body_peg_h, scale = body_peg_taper)
-            _asym_stadium_2d(d_back, d_front, length);
+    oralb_body_peg(
+        d_back    = body_peg_d_back,
+        d_front   = body_peg_d_front,
+        length    = body_peg_l,
+        height    = body_peg_h,
+        tolerance = body_peg_tolerance,
+        taper     = body_peg_taper
+    );
 }
 
 module _slot_additions() {

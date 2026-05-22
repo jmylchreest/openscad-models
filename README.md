@@ -9,6 +9,7 @@ Parametric OpenSCAD models and the libraries I wrote to support them.
 | [ikea-skadis](./libraries/ikea-skadis.md) | IKEA SKÅDIS pegboard primitives — surface-agnostic peg + staggered-grid placer matching the real two-grid 40 × 20 mm layout, 5 × 15 mm slots, 5.5 mm panel. Every mechanical dimension is overridable per call. MIT. |
 | [container](./libraries/container.md) | Generic box with per-face layered styles (solid / hex / grid) and arbitrary cuts. Drop-in `insert()` reads the container's outer dimensions so the two stay in sync. MIT. |
 | [modular-clip](./libraries/modular-clip.md) | Parametric spring edge-clip + standardised dovetail connector. Any clip mates with any holder — vary the clip body and holder geometry independently, the dovetail interface stays fixed. MIT. |
+| [toothbrush-pegs](./libraries/toothbrush-pegs/toothbrush-pegs.scad) | Peg shapes measured from real electric-toothbrush base recesses. Ships with the Oral-B (Type 3766-class) asymmetric stadium peg; add more families (Sonicare, Quip) as you measure them. Each peg takes a `tolerance` so you can dial in the slide-fit per filament. MIT. |
 
 ## Models
 
@@ -20,7 +21,7 @@ Parametric OpenSCAD models and the libraries I wrote to support them.
 | [modular-clip-hook](./models/modular-clip-hook/) | L-hook accessory on the same modular-clip dovetail — cables, keys, headphones. Any modular-clip mates with any modular-clip accessory. |
 | [usb-a-to-c-storage-adapter](./models/usb-a-to-c-storage-adapter/) | Parametric solid USB-A shell hollowed to a USB-C pocket — friction-fits into a USB-A storage slot to convert it. |
 | [bambu-rfid-tag](./models/bambu-rfid-tag/) | Thin disc that holds a round adhesive RFID sticker (default 25.5 mm) and snaps into two of the side-wall holes on a Bambu filament spool — replaces a Bambu OEM RFID tag with minimal material. Ships with an [OrcaSlicer / Bambu Studio process profile](./models/bambu-rfid-tag/print-profile.md) tuned for the model. See [`contrib/`](./contrib/) for a Proxmark3 writer helper. |
-| [oralb-caddy](./models/oralb-caddy/) | Parametric caddy for Oral-B electric toothbrushes, replacement brush heads, and a toothpaste tube. 1–2 rows of slots; each slot is independently a body (through-hole), a head (raised peg) or a toothpaste hole. Sized for Oral-B Pro / Vitality / iO defaults; every diameter, floor depth, peg dimension, and the feet are parametric. |
+| [oralb-caddy](./models/oralb-caddy/) | Parametric hollow stadium-ring caddy for Oral-B electric toothbrushes, replacement brush heads, and a toothpaste tube. Multi-row slot layout with center / left / right alignment; each slot independently picks a type. Sized for Oral-B Pro / Vitality / iO defaults; auto-derives width and depth from the slot layout, with the body peg coming from the [toothbrush-pegs](./libraries/toothbrush-pegs/toothbrush-pegs.scad) library. Pair with [oralb-peg-test](./test-prints/oralb-peg-test/) to dial in the peg tolerance. |
 
 `test-prints/` — minimum-material fit-check pieces for the same designs.
 `contrib/` — small companion helpers (e.g. a `pm3` wrapper for writing a Mifare 1K dump to a blank RFID sticker).
