@@ -20,6 +20,7 @@ Parametric OpenSCAD models and the libraries I wrote to support them.
 | [modular-clip-hook](./models/modular-clip-hook/) | L-hook accessory on the same modular-clip dovetail — cables, keys, headphones. Any modular-clip mates with any modular-clip accessory. |
 | [usb-a-to-c-storage-adapter](./models/usb-a-to-c-storage-adapter/) | Parametric solid USB-A shell hollowed to a USB-C pocket — friction-fits into a USB-A storage slot to convert it. |
 | [bambu-rfid-tag](./models/bambu-rfid-tag/) | Thin disc that holds a round adhesive RFID sticker (default 25.5 mm) and snaps into two of the side-wall holes on a Bambu filament spool — replaces a Bambu OEM RFID tag with minimal material. Ships with an [OrcaSlicer / Bambu Studio process profile](./models/bambu-rfid-tag/print-profile.md) tuned for the model. See [`contrib/`](./contrib/) for a Proxmark3 writer helper. |
+| [oralb-caddy](./models/oralb-caddy/) | Parametric caddy for Oral-B electric toothbrushes, replacement brush heads, and a toothpaste tube. 1–2 rows of slots; each slot is independently a body (through-hole), a head (raised peg) or a toothpaste hole. Sized for Oral-B Pro / Vitality / iO defaults; every diameter, floor depth, peg dimension, and the feet are parametric. |
 
 `test-prints/` — minimum-material fit-check pieces for the same designs.
 `contrib/` — small companion helpers (e.g. a `pm3` wrapper for writing a Mifare 1K dump to a blank RFID sticker).
