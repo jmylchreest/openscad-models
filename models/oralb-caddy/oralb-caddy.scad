@@ -53,23 +53,32 @@ wall_t    = 6;    // uniform thickness of the ring's top/bottom/end-cap walls
 
 /* [Body slot — Oral-B brush body] */
 // Bodies are ~28 mm — 30 mm hole gives ~1 mm clearance per side. The
-// brush passes through the top hole into the hollow interior and
-// stands on the bottom strip. The peg engages the small alignment
-// recess on the brush's underside. Measured off Printables 279981's
-// STL, that peg is a TOMBSTONE / D-shape (one end rounded, the other
-// end flat) that narrows linearly from base to top — the asymmetric
-// cross-section keys the brush rotationally and the taper makes the
-// brush easy to drop on.
-//   body_peg_l → length along the peg's LONG axis (rounded ↔ flat ends)
-//   body_peg_w → width across (also = diameter of the rounded end)
-//   body_peg_h → vertical height
-//   body_peg_taper → top-face size as a fraction of the base (1.0 = no taper)
-body_hole_d    = 30;
-body_through   = false;  // true = also punch the bottom strip (pass-through)
-body_peg_l     = 9.0;
-body_peg_w     = 4.0;
-body_peg_h     = 8.0;
-body_peg_taper = 0.7;
+// brush passes through the top hole and rests on the bottom strip;
+// the peg engages the recess on the brush's underside. Measured off
+// a real Oral-B handle (Type 3766-class), the recess is an asymmetric
+// stadium — two circles of different Ø joined by tangent lines:
+//   d_back  = 8.4 mm   — wider end (the brush's CHARGING-side / "rear")
+//   d_front = 6.4 mm   — narrower end (the brush's bristle side / "front")
+//   length  = 9.3 mm   — back arc edge → front arc edge
+//   depth   = 12.5 mm  — how deep the recess goes into the brush
+// body_peg_tolerance is subtracted from each XY dimension so the peg
+// slides in without binding (0.3 mm by default = ~0.15 mm/side).
+// body_peg_taper narrows the top of the peg for easier insertion.
+// The peg's long axis is oriented along Y so the wider back end
+// faces the BACK of the caddy (+Y) — brushes seat with their
+// charging side away from the viewer.
+//
+// A future toothbrush-pegs library could swap d_back/d_front/length
+// out for other brush families (Sonicare, etc.) without touching the
+// caddy logic.
+body_hole_d        = 30;
+body_through       = false;  // true = also punch the bottom strip (pass-through)
+body_peg_d_back    = 8.4;
+body_peg_d_front   = 6.4;
+body_peg_l         = 9.3;
+body_peg_h         = 11.0;   // ≤ 12.5 mm recess depth
+body_peg_tolerance = 0.3;    // total XY clearance — subtracted from each dimension
+body_peg_taper     = 0.85;
 
 /* [Head slot — Oral-B replacement brush head] */
 // Heads have a hollow shaft ~5 mm Ø; a 4 mm peg gives a snug fit. Top
@@ -159,27 +168,18 @@ function _slot_through(t) =
     : t == "toothpaste" ? toothpaste_through
     :                     false;
 
-function _slot_peg_l(t)   =
-      t == "body"       ? body_peg_l
-    : t == "head"       ? head_peg_d
+// Head + toothpaste are round pegs, dispatched on a single diameter.
+// The body peg has its own shape (see _oralb_body_peg) and is dispatched
+// separately in _slot_additions.
+function _round_peg_d(t)  =
+      t == "head"       ? head_peg_d
     : t == "toothpaste" ? toothpaste_peg_d
     :                     0;
 
-function _slot_peg_w(t)   =
-      t == "body"       ? body_peg_w
-    : t == "head"       ? head_peg_d
-    : t == "toothpaste" ? toothpaste_peg_d
-    :                     0;
-
-function _slot_peg_h(t)   =
-      t == "body"       ? body_peg_h
-    : t == "head"       ? head_peg_h
+function _round_peg_h(t)  =
+      t == "head"       ? head_peg_h
     : t == "toothpaste" ? toothpaste_peg_h
     :                     0;
-
-function _slot_peg_taper(t) =
-      t == "body" ? body_peg_taper
-    :              1.0;
 
 // ---- derived ----
 num_rows = len(slot_rows);
@@ -314,29 +314,31 @@ module _socket(x_sign, y_sign) {
 // Additive features: pegs rising from the INSIDE face of the bottom
 // strip (Z = wall_t) up into the hollow. Skipped on pass-through slots
 // since the bottom strip is punched out there.
-// 2D D-shape: rectangle with a semicircular cap on the +X side. Total
-// X extent = l (the long axis); total Y extent = w (the short axis,
-// which is also the diameter of the rounded end). Centered at origin.
-module _d_shape_2d(l, w) {
-    rect_w = l - w / 2;  // length of the straight portion
-    union() {
-        translate([-w / 4, 0])
-            square([rect_w, w], center = true);
-        translate([l / 2 - w / 2, 0])
-            circle(d = w);
-    }
+// Asymmetric stadium 2D shape — hull of two circles of different Ø
+// joined by tangent lines. Centered along the long axis so the peg's
+// midpoint lands at the origin. d_back is the LARGER diameter (placed
+// at -X); d_front the smaller (placed at +X). length = back arc edge
+// to front arc edge along the long axis.
+module _asym_stadium_2d(d_back, d_front, length) {
+    sep = length - (d_back + d_front) / 2;
+    translate([-sep / 2, 0])
+        hull() {
+            circle(d = d_back);
+            translate([sep, 0]) circle(d = d_front);
+        }
 }
 
-// Peg standing at the origin, axis along +Z. l = long axis at the base,
-// w = short axis at the base, h = height, taper = top size as a fraction
-// of the base (1.0 = straight sides, < 1.0 narrows toward the top).
-// When l == w and taper == 1 the peg becomes a plain round cylinder.
-module _peg(l, w, h, taper) {
-    if (l == w && taper == 1.0)
-        cylinder(d = w, h = h);
-    else
-        linear_extrude(height = h, scale = taper)
-            _d_shape_2d(l, w);
+// Oral-B body peg. Reads body_peg_* parameters, applies tolerance, and
+// extrudes the asymmetric stadium upward (with `taper` scaling the top
+// face down). Long axis aligned with world Y so the wider "back" end
+// faces the back of the caddy.
+module _oralb_body_peg() {
+    d_back  = max(0.1, body_peg_d_back  - body_peg_tolerance);
+    d_front = max(0.1, body_peg_d_front - body_peg_tolerance);
+    length  = max(d_back + d_front, body_peg_l - body_peg_tolerance);
+    rotate([0, 0, -90])
+        linear_extrude(height = body_peg_h, scale = body_peg_taper)
+            _asym_stadium_2d(d_back, d_front, length);
 }
 
 module _slot_additions() {
@@ -344,14 +346,17 @@ module _slot_additions() {
         for (i = [0 : len(slot_rows[j]) - 1]) {
             t = slot_rows[j][i];
             p = _slot_xy(i, j);
-            pl = _slot_peg_l(t);
-            pw = _slot_peg_w(t);
-            ph = _slot_peg_h(t);
-            tp = _slot_peg_taper(t);
             thru = _slot_through(t);
-            if (pw > 0 && ph > 0 && !thru)
+            if (!thru)
                 translate([p[0], p[1], wall_t])
-                    _peg(pl, pw, ph, tp);
+                    if (t == "body") {
+                        _oralb_body_peg();
+                    } else {
+                        rd = _round_peg_d(t);
+                        rh = _round_peg_h(t);
+                        if (rd > 0 && rh > 0)
+                            cylinder(d = rd, h = rh);
+                    }
         }
 }
 
