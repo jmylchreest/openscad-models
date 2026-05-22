@@ -36,27 +36,33 @@ render_target = "all";  // [caddy, feet, all, assembled]
 //   2 rows (heads in front, brushes + paste in back):
 //     slot_rows = [["head", "head", "head"],
 //                  ["body", "toothpaste", "body"]];
-slot_rows = [["body", "toothpaste", "body"], ["toothpaste"]];
+slot_rows = [["body", "toothpaste", "body"], ["toothpaste", "body"]];
 
 /* [Caddy frame — the stadium-prism block] */
-caddy_w   = 175;  // X — long axis of the stadium silhouette
+// caddy_w and caddy_d are 0 by default — sized automatically from the
+// slot layout, the largest hole in use, and the rim/end-cap margins.
+// Set either to a positive value to override (the model still honours
+// the slot layout — you're just claiming more material around it).
+//   auto width = (max_cols − 1) · slot_spacing_x + 2·(corner_r + 4)
+//   auto depth = (num_rows − 1) · slot_spacing_y + max_hole_d + 28
+caddy_w   = 0;    // X — 0 = auto-derived from slot layout
 caddy_h   = 55;   // Z — short axis of the stadium (visible height)
-caddy_d   = 60;   // Y — extrusion depth (front-to-back, open through)
+caddy_d   = 0;    // Y — 0 = auto-derived from slot layout
 corner_r  = 27;   // outer corner radius in XZ (caddy_h/2 = full oval)
 wall_t    = 6;    // uniform thickness of the ring's top/bottom/end-cap walls
 
 /* [Body slot — Oral-B brush body] */
 // Bodies are ~28 mm — 30 mm hole gives ~1 mm clearance per side. The
 // brush passes through the top hole into the hollow interior and
-// stands on the bottom strip. The peg matches a standard Oral-B
-// charging-dock spigot (the bump in the middle of the charging base):
-// nominally 11 mm Ø × 6 mm tall, with the brush's charging recess
-// sliding down over it. The original Printables 3MF (393824) just uses
-// a flat floor with no peg — set body_peg_d = 0 to match.
+// stands on the bottom strip. The peg engages the small alignment
+// recess on the brush's underside (NOT the big charging-dock spigot
+// recess — that's on the dock side, not the brush). The visible pegs
+// on Printables 279981 measure roughly 6 mm Ø × 10 mm tall; values
+// match Oral-B Pro / Vitality / iO bodies.
 body_hole_d   = 30;
 body_through  = false;  // true = also punch the bottom strip (pass-through)
-body_peg_d    = 11.0;   // ≈ Oral-B charging-dock spigot
-body_peg_h    = 6.0;
+body_peg_d    = 6.0;    // fits the brush base's centre recess
+body_peg_h    = 10.0;
 
 /* [Head slot — Oral-B replacement brush head] */
 // Heads have a hollow shaft ~5 mm Ø; a 4 mm peg gives a snug fit. Top
@@ -162,6 +168,25 @@ function _slot_peg_h(t)   =
 num_rows = len(slot_rows);
 max_cols = max([for (row = slot_rows) len(row)]);
 
+// Largest hole in use across every populated slot. Used by the
+// auto-size formulas below.
+max_hole_d = max([
+    for (row = slot_rows) for (t = row)
+        if (_slot_hole_d(t) > 0) _slot_hole_d(t)
+]);
+
+// Auto-size formulas. Width: span between outermost slot centres plus
+// a corner_r-sized end cap (the full rounded stadium tip) on each end,
+// with 4 mm of extra meat. Depth: span between rows plus a half-hole +
+// 14 mm rim on each side (gives a comfortable 14 mm gap between the
+// outermost slot edge and the caddy's Y face — matches the source 3MF
+// proportions for both 1- and 2-row layouts).
+function _auto_caddy_w() = (max_cols - 1) * slot_spacing_x + 2 * (corner_r + 4);
+function _auto_caddy_d() = (num_rows - 1) * slot_spacing_y + max_hole_d + 28;
+
+_caddy_w = caddy_w > 0 ? caddy_w : _auto_caddy_w();
+_caddy_d = caddy_d > 0 ? caddy_d : _auto_caddy_d();
+
 // X offset applied to the whole row to honour `row_align`. The row's
 // own column index then steps in `slot_spacing_x` from there.
 function _row_x_offset(row) =
@@ -180,8 +205,8 @@ function _slot_xy(col, row) = [
 // Half-extents of the FLAT bottom strip of the stadium prism — the
 // region of the bottom face that's actually at Z = 0 (outside this in
 // X, the stadium curves up and there's no surface to mount feet to).
-flat_half_w = caddy_w / 2 - corner_r;
-flat_half_d = caddy_d / 2;
+flat_half_w = _caddy_w / 2 - corner_r;
+flat_half_d = _caddy_d / 2;
 
 function _foot_xy(x_sign, y_sign) = [
     x_sign * (flat_half_w - feet_inset_x),
@@ -201,7 +226,7 @@ module rounded_rect_2d(w, h, r) {
 // ---- caddy geometry ----
 
 // Solid stadium prism. The 2D stadium is drawn in (drawing) XY at size
-// caddy_w × caddy_h; linear_extrude goes in the drawing's +Z; then
+// _caddy_w × caddy_h; linear_extrude goes in the drawing's +Z; then
 // rotate([-90,0,0]) maps the drawing's Y → world Z (so the stadium's
 // short axis becomes vertical) and the drawing's Z → world Y (so the
 // extrusion lies along the caddy's depth). Finally translate it up so
@@ -209,20 +234,20 @@ module rounded_rect_2d(w, h, r) {
 module _outer_solid() {
     translate([0, 0, caddy_h / 2])
         rotate([-90, 0, 0])
-            linear_extrude(height = caddy_d, center = true)
-                rounded_rect_2d(caddy_w, caddy_h, corner_r);
+            linear_extrude(height = _caddy_d, center = true)
+                rounded_rect_2d(_caddy_w, caddy_h, corner_r);
 }
 
 // Inner hollow — smaller stadium prism extruded clear through Y so the
 // ring is open at both ends. Inset by wall_t on all sides; if corner_r
 // shrinks below 0.1 mm the inner falls back to a sharp-cornered rect.
 module _inner_hollow() {
-    inner_w = caddy_w - 2 * wall_t;
+    inner_w = _caddy_w - 2 * wall_t;
     inner_h = caddy_h - 2 * wall_t;
     inner_r = max(0.1, corner_r - wall_t);
     translate([0, 0, caddy_h / 2])
         rotate([-90, 0, 0])
-            linear_extrude(height = caddy_d + 2, center = true)
+            linear_extrude(height = _caddy_d + 2, center = true)
                 rounded_rect_2d(inner_w, inner_h, inner_r);
 }
 
@@ -377,7 +402,7 @@ if (render_target == "caddy") {
     feet_for_print();
 } else if (render_target == "all") {
     caddy();
-    translate([-caddy_w / 2 - 30, 0, 0])
+    translate([-_caddy_w / 2 - 30, 0, 0])
         feet_for_print();
 } else if (render_target == "assembled") {
     caddy();
