@@ -56,31 +56,13 @@ wall_t    = 6;    // uniform thickness of the ring's top/bottom/end-cap walls
 /* [Body slot — Oral-B brush body] */
 // Bodies are ~28 mm — 30 mm hole gives ~1 mm clearance per side. The
 // brush passes through the top hole and rests on the bottom strip;
-// the peg engages the recess on the brush's underside. Measured off
-// a real Oral-B handle (Type 3766-class), the recess is an asymmetric
-// stadium — two circles of different Ø joined by tangent lines:
-//   d_back  = 8.4 mm   — wider end (the brush's CHARGING-side / "rear")
-//   d_front = 6.4 mm   — narrower end (the brush's bristle side / "front")
-//   length  = 9.3 mm   — back arc edge → front arc edge
-//   depth   = 12.5 mm  — how deep the recess goes into the brush
-// body_peg_tolerance is subtracted from each XY dimension so the peg
-// slides in without binding (0.3 mm by default = ~0.15 mm/side).
-// body_peg_taper narrows the top of the peg for easier insertion.
-// The peg's long axis is oriented along Y so the wider back end
-// faces the BACK of the caddy (+Y) — brushes seat with their
-// charging side away from the viewer.
-//
-// A future toothbrush-pegs library could swap d_back/d_front/length
-// out for other brush families (Sonicare, etc.) without touching the
-// caddy logic.
+// the peg engages the asymmetric recess on the brush's underside.
+// Peg shape, size and height are fixed in libraries/toothbrush-pegs;
+// only the slide-fit tolerance is exposed here (use oralb-peg-test/
+// to dial it in).
 body_hole_d        = 30;
 body_through       = false;  // true = also punch the bottom strip (pass-through)
-body_peg_d_back    = 8.4;
-body_peg_d_front   = 6.4;
-body_peg_l         = 9.3;
-body_peg_h         = 11.0;   // ≤ 12.5 mm recess depth
 body_peg_tolerance = 0.3;    // total XY clearance — subtracted from each dimension
-body_peg_taper     = 0.85;
 
 /* [Head slot — Oral-B replacement brush head] */
 // Heads have a hollow shaft ~5 mm Ø; a 4 mm peg gives a snug fit. Top
@@ -316,18 +298,10 @@ module _socket(x_sign, y_sign) {
 // Additive features: pegs rising from the INSIDE face of the bottom
 // strip (Z = wall_t) up into the hollow. Skipped on pass-through slots
 // since the bottom strip is punched out there.
-// Oral-B body peg wrapper — pulls the body_peg_* params out of global
-// scope and hands them to the library module so the caddy and the
-// peg-fit test piece share the same geometry.
+// Oral-B body peg wrapper — only the slide-fit tolerance varies per
+// caddy; the rest of the peg geometry lives in toothbrush-pegs.
 module _oralb_body_peg() {
-    oralb_body_peg(
-        d_back    = body_peg_d_back,
-        d_front   = body_peg_d_front,
-        length    = body_peg_l,
-        height    = body_peg_h,
-        tolerance = body_peg_tolerance,
-        taper     = body_peg_taper
-    );
+    oralb_body_peg(tolerance = body_peg_tolerance);
 }
 
 module _slot_additions() {
