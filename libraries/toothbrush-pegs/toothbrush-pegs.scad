@@ -24,12 +24,18 @@
 // is exposed below — because the brush's recess never changes between
 // handles. Edit these constants if your handle disagrees; the test
 // piece picks up the new sizes automatically.
-ORALB_PEG_W_BACK    = 8.4;   // width at the back (charging-side) end
-ORALB_PEG_W_FRONT   = 7.4;   // width at the front (bristle-side) end
-ORALB_PEG_LENGTH    = 9.3;   // back end → front end along the long axis
+ORALB_PEG_W_BACK    = 9.0;   // width at the back (charging-side) end
+ORALB_PEG_W_FRONT   = 8.4;   // width at the front (bristle-side) end
+ORALB_PEG_LENGTH    = 9.7;   // back end → front end along the long axis
 ORALB_PEG_CORNER_R  = 3.0;   // rounding radius applied at every corner
 ORALB_PEG_HEIGHT    = 7.0;   // vertical peg height (≤ ~12.5 mm recess depth)
 ORALB_PEG_DEPTH_MAX = 12.5;  // brush's recess depth — keep ORALB_PEG_HEIGHT under this
+
+// Oral-B replacement-head peg dimensions. The head's hollow shaft slides
+// down over a thin vertical post; the post fills the shaft to keep the
+// head upright.
+ORALB_HEAD_PEG_D = 4.0;      // post diameter (head shaft ≈ 5 mm Ø)
+ORALB_HEAD_PEG_H = 25;       // post height — long enough to fill the shaft
 
 // Trapezoid-with-rounded-corners — hull of four corner circles, one at
 // each corner of an isoceles trapezoid (w_back wide at +Y, w_front wide
@@ -106,4 +112,12 @@ module oralb_body_peg(
                             );
                 }
     }
+}
+
+// Oral-B replacement-head peg. A thin vertical post that fills the
+// head's hollow shaft from below. Tolerance shrinks the diameter
+// (split evenly per side). Centred on the origin, growing in +Z.
+module oralb_head_peg(tolerance = 0.3) {
+    d = max(0.1, ORALB_HEAD_PEG_D - tolerance);
+    cylinder(d = d, h = ORALB_HEAD_PEG_H);
 }
