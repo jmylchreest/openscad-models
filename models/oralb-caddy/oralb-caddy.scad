@@ -30,7 +30,14 @@ render_target = "all";  // [caddy, feet, all, assembled]
 
 /* [Layout] */
 // Each inner list is one row of slots, arranged front-to-back along Y.
-// Allowed types: "body", "head", "toothpaste", "".
+// Allowed types:
+//   "body"       — brush body slot (hole + peg)
+//   "head"       — replacement-head slot (hole + tall peg)
+//   "toothpaste" — toothpaste tube hole
+//   "solid"      — RESERVED position: counted for spacing, no hole, no
+//                  peg. Use to place "real" slots at specific spots in
+//                  a grid without filling every grid cell.
+//   ""           — same as "solid", legacy spelling.
 //
 //   1 row (matches the source 3MF):
 //     slot_rows = [["body", "toothpaste", "body"]];
@@ -38,6 +45,10 @@ render_target = "all";  // [caddy, feet, all, assembled]
 //   2 rows (heads in front, brushes + paste in back):
 //     slot_rows = [["head", "head", "head"],
 //                  ["body", "toothpaste", "body"]];
+//
+//   Sparse — keep the layout, blank some cells with "solid":
+//     slot_rows = [["body",  "solid", "body"],
+//                  ["solid", "body",  "solid"]];
 slot_rows = [["body", "toothpaste", "body"], ["toothpaste", "body"]];
 
 /* [Caddy frame — the stadium-prism block] */
