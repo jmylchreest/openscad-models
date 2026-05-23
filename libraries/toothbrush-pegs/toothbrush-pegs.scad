@@ -17,42 +17,46 @@
 //
 // Author: John Mylchreest <jmylchreest@gmail.com>. MIT licensed.
 
-// Oral-B (Type 3766-class) handle base peg dimensions. The geometry is
-// FIXED — only `tolerance` is exposed on the module below — because the
-// brush's recess never changes between handles and a known-good shape
-// is more useful than a tunable one. If you find these are wrong for
-// your handle, edit these constants and the test piece will pick up
-// the new sizes automatically.
-ORALB_PEG_D_BACK    = 7.1;   // wider arc Ø (charging-side end)
-ORALB_PEG_D_FRONT   = 5.4;   // narrower arc Ø (bristle-side end)
-ORALB_PEG_LENGTH    = 7.9;   // back arc edge → front arc edge along the long axis
-ORALB_PEG_HEIGHT    = 7.5;   // vertical peg height (≤ ~12.5 mm recess depth)
+// Oral-B (Type 3766-class) handle base peg dimensions. The recess is a
+// rounded rectangle that's wider at the charging-side end than at the
+// bristle-side end, with small radius corners — NOT the smooth teardrop
+// a `hull(2 circles)` would give. Geometry is FIXED — only `tolerance`
+// is exposed below — because the brush's recess never changes between
+// handles. Edit these constants if your handle disagrees; the test
+// piece picks up the new sizes automatically.
+ORALB_PEG_W_BACK    = 8.4;   // width at the back (charging-side) end
+ORALB_PEG_W_FRONT   = 6.5;   // width at the front (bristle-side) end
+ORALB_PEG_LENGTH    = 9.3;   // back end → front end along the long axis
+ORALB_PEG_CORNER_R  = 2.0;   // rounding radius applied at every corner
+ORALB_PEG_HEIGHT    = 5.0;   // vertical peg height (≤ ~12.5 mm recess depth)
 ORALB_PEG_DEPTH_MAX = 12.5;  // brush's recess depth — keep ORALB_PEG_HEIGHT under this
 
-// Asymmetric stadium: hull of two circles of different Ø joined by
-// tangent lines. Centered along the long axis (X here); back circle on
-// the −X side (wider), front on the +X side (narrower). Used by the
-// peg module below — exposed in case you want the 2D footprint for a
-// matching recess cut.
-module asym_stadium_2d(d_back, d_front, length) {
-    sep = length - (d_back + d_front) / 2;
-    translate([-sep / 2, 0])
-        hull() {
-            circle(d = d_back);
-            translate([sep, 0]) circle(d = d_front);
-        }
+// Trapezoid-with-rounded-corners — hull of four corner circles, one at
+// each corner of an isoceles trapezoid (w_back wide at +Y, w_front wide
+// at −Y, total length along Y). Corner radii are equal at all four
+// corners; the side walls come out as the straight tangent lines
+// between the back and front circles on each side (≈ 5–6° in from
+// vertical for the default Oral-B numbers). Centered at the origin.
+module asym_rounded_rect_2d(w_back, w_front, length, r) {
+    rr = max(0.1, min(r, min(w_back, w_front, length) / 2 - 0.001));
+    hull() {
+        translate([-w_back  / 2 + rr,  length / 2 - rr]) circle(r = rr);
+        translate([+w_back  / 2 - rr,  length / 2 - rr]) circle(r = rr);
+        translate([-w_front / 2 + rr, -length / 2 + rr]) circle(r = rr);
+        translate([+w_front / 2 - rr, -length / 2 + rr]) circle(r = rr);
+    }
 }
 
-// Oral-B brush body peg — straight extrusion of the asymmetric stadium,
-// no vertical taper. `tolerance` is the only knob: it's subtracted from
-// every XY dimension (split per side) so the peg slides into the recess
-// without binding. The long axis comes out along world Y with the
-// wider "back" end at +Y.
+// Oral-B brush body peg — straight extrusion of the trapezoidal
+// rounded rectangle, no vertical taper. `tolerance` is the only knob:
+// it's subtracted from the linear dimensions and from twice the corner
+// radius (≈ even per-side clearance everywhere). The long axis comes
+// out along world Y with the wider "back" end at +Y.
 module oralb_body_peg(tolerance = 0.3) {
-    d_back_t  = max(0.1, ORALB_PEG_D_BACK  - tolerance);
-    d_front_t = max(0.1, ORALB_PEG_D_FRONT - tolerance);
-    length_t  = max(d_back_t + d_front_t, ORALB_PEG_LENGTH - tolerance);
-    rotate([0, 0, -90])  // map 2D X → world −Y so back lands at +Y
-        linear_extrude(height = ORALB_PEG_HEIGHT)
-            asym_stadium_2d(d_back_t, d_front_t, length_t);
+    wb = max(0.1, ORALB_PEG_W_BACK   - tolerance);
+    wf = max(0.1, ORALB_PEG_W_FRONT  - tolerance);
+    l  = max(0.1, ORALB_PEG_LENGTH   - tolerance);
+    rr = max(0.1, ORALB_PEG_CORNER_R - tolerance / 2);
+    linear_extrude(height = ORALB_PEG_HEIGHT)
+        asym_rounded_rect_2d(wb, wf, l, rr);
 }
