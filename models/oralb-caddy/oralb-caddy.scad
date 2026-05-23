@@ -60,9 +60,12 @@ wall_t    = 6;    // uniform thickness of the ring's top/bottom/end-cap walls
 // Peg shape, size and height are fixed in libraries/toothbrush-pegs;
 // only the slide-fit tolerance is exposed here (use oralb-peg-test/
 // to dial it in).
-body_hole_d        = 30;
-body_through       = false;  // true = also punch the bottom strip (pass-through)
-body_peg_tolerance = 0.3;    // total XY clearance — subtracted from each dimension
+body_hole_d         = 30;
+body_through        = false;  // true = also punch the bottom strip (pass-through)
+body_peg_tolerance  = 0.3;    // total XY clearance — subtracted from each dimension
+body_peg_taper      = 2.0;    // total XY shrinkage from peg base to top of main body
+body_peg_chamfer    = 0.5;    // extra per-side inset at the very top (insertion lead-in)
+body_peg_chamfer_h  = 0.5;    // vertical height of the chamfer (45° at 0.5/0.5)
 
 /* [Head slot — Oral-B replacement brush head] */
 // Heads have a hollow shaft ~5 mm Ø; a 4 mm peg gives a snug fit. Top
@@ -298,10 +301,16 @@ module _socket(x_sign, y_sign) {
 // Additive features: pegs rising from the INSIDE face of the bottom
 // strip (Z = wall_t) up into the hollow. Skipped on pass-through slots
 // since the bottom strip is punched out there.
-// Oral-B body peg wrapper — only the slide-fit tolerance varies per
-// caddy; the rest of the peg geometry lives in toothbrush-pegs.
+// Oral-B body peg wrapper — passes the caddy's tolerance / taper /
+// chamfer settings through to the library so the peg geometry is one
+// source of truth.
 module _oralb_body_peg() {
-    oralb_body_peg(tolerance = body_peg_tolerance);
+    oralb_body_peg(
+        tolerance = body_peg_tolerance,
+        taper     = body_peg_taper,
+        chamfer   = body_peg_chamfer,
+        chamfer_h = body_peg_chamfer_h
+    );
 }
 
 module _slot_additions() {

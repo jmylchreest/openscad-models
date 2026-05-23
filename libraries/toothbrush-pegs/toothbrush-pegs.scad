@@ -24,11 +24,11 @@
 // is exposed below — because the brush's recess never changes between
 // handles. Edit these constants if your handle disagrees; the test
 // piece picks up the new sizes automatically.
-ORALB_PEG_W_BACK    = 8.2;   // width at the back (charging-side) end
-ORALB_PEG_W_FRONT   = 6.5;   // width at the front (bristle-side) end
+ORALB_PEG_W_BACK    = 8.4;   // width at the back (charging-side) end
+ORALB_PEG_W_FRONT   = 7.4;   // width at the front (bristle-side) end
 ORALB_PEG_LENGTH    = 9.3;   // back end → front end along the long axis
-ORALB_PEG_CORNER_R  = 4.0;   // rounding radius applied at every corner
-ORALB_PEG_HEIGHT    = 5.0;   // vertical peg height (≤ ~12.5 mm recess depth)
+ORALB_PEG_CORNER_R  = 3.0;   // rounding radius applied at every corner
+ORALB_PEG_HEIGHT    = 7.0;   // vertical peg height (≤ ~12.5 mm recess depth)
 ORALB_PEG_DEPTH_MAX = 12.5;  // brush's recess depth — keep ORALB_PEG_HEIGHT under this
 
 // Trapezoid-with-rounded-corners — hull of four corner circles, one at
@@ -47,16 +47,63 @@ module asym_rounded_rect_2d(w_back, w_front, length, r) {
     }
 }
 
-// Oral-B brush body peg — straight extrusion of the trapezoidal
-// rounded rectangle, no vertical taper. `tolerance` is the only knob:
-// it's subtracted from the linear dimensions and from twice the corner
-// radius (≈ even per-side clearance everywhere). The long axis comes
-// out along world Y with the wider "back" end at +Y.
-module oralb_body_peg(tolerance = 0.3) {
+// Oral-B brush body peg. The base cross-section comes from the
+// constants above and the tolerance; on top of that:
+//   * `taper` is the TOTAL XY shrinkage from the peg's base to the top
+//     of its main (tapered) body — subtracted from each linear
+//     dimension, half from the corner radius. 2 mm by default so the
+//     top sits comfortably narrower than the recess opening.
+//   * `chamfer` adds an extra bevel at the very top in `chamfer_h` of
+//     vertical height, removing `chamfer` per side from the linear
+//     dimensions. A 0.5 × 0.5 mm default gives a 45° lead-in for
+//     easier insertion. Set `chamfer = 0` or `chamfer_h = 0` to skip.
+// Long axis comes out along world Y with the wider "back" end at +Y.
+module oralb_body_peg(
+    tolerance = 0.3,
+    taper     = 2.0,
+    chamfer   = 0.5,
+    chamfer_h = 0.5
+) {
     wb = max(0.1, ORALB_PEG_W_BACK   - tolerance);
     wf = max(0.1, ORALB_PEG_W_FRONT  - tolerance);
     l  = max(0.1, ORALB_PEG_LENGTH   - tolerance);
     rr = max(0.1, ORALB_PEG_CORNER_R - tolerance / 2);
-    linear_extrude(height = ORALB_PEG_HEIGHT)
-        asym_rounded_rect_2d(wb, wf, l, rr);
+    h  = ORALB_PEG_HEIGHT;
+
+    use_chamfer = chamfer > 0 && chamfer_h > 0;
+    main_h = use_chamfer ? h - chamfer_h : h;
+
+    // Top of the tapered main body (also bottom of the chamfer when
+    // the chamfer is in use).
+    wb_t = max(0.1, wb - taper);
+    wf_t = max(0.1, wf - taper);
+    l_t  = max(0.1, l  - taper);
+    rr_t = max(0.1, rr - taper / 2);
+
+    union() {
+        // Tapered main body — hull from the full base up to the taper-top.
+        hull() {
+            linear_extrude(height = 0.01)
+                asym_rounded_rect_2d(wb, wf, l, rr);
+            translate([0, 0, main_h - 0.01])
+                linear_extrude(height = 0.01)
+                    asym_rounded_rect_2d(wb_t, wf_t, l_t, rr_t);
+        }
+        // Optional top chamfer — hull from taper-top up to a smaller
+        // cross-section, giving a quick bevel at the very top edge.
+        if (use_chamfer)
+            translate([0, 0, main_h])
+                hull() {
+                    linear_extrude(height = 0.01)
+                        asym_rounded_rect_2d(wb_t, wf_t, l_t, rr_t);
+                    translate([0, 0, chamfer_h - 0.01])
+                        linear_extrude(height = 0.01)
+                            asym_rounded_rect_2d(
+                                max(0.1, wb_t - 2 * chamfer),
+                                max(0.1, wf_t - 2 * chamfer),
+                                max(0.1, l_t  - 2 * chamfer),
+                                max(0.1, rr_t - chamfer)
+                            );
+                }
+    }
 }

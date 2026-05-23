@@ -13,10 +13,13 @@
 include <../../libraries/toothbrush-pegs/toothbrush-pegs.scad>
 
 /* [Peg] */
-// The peg's shape and size are fixed by the library — only tolerance
-// is configurable here. Re-print at a different value if this one's
-// too loose or too tight.
+// The peg's base shape and size are fixed by the library; tolerance,
+// taper and chamfer are the per-print knobs. Re-print at different
+// values if the brush is too loose, too tight, or hard to align.
 peg_tolerance = 0.3;
+peg_taper     = 2.0;   // total XY shrinkage from base to top of main body
+peg_chamfer   = 0.5;   // extra per-side inset at the very top (insertion lead-in)
+peg_chamfer_h = 0.5;   // vertical height of the chamfer (45° at 0.5/0.5)
 
 /* [Plate] */
 plate_t       = 1.5;
@@ -36,7 +39,12 @@ module test_piece() {
         translate([0, 0, plate_t / 2])
             cube([plate_w, plate_d, plate_t], center = true);
         translate([0, 0, plate_t])
-            oralb_body_peg(tolerance = peg_tolerance);
+            oralb_body_peg(
+                tolerance = peg_tolerance,
+                taper     = peg_taper,
+                chamfer   = peg_chamfer,
+                chamfer_h = peg_chamfer_h
+            );
     }
 }
 
