@@ -28,7 +28,7 @@ $fs = $preview ? $fs : 0.2;
 $fn = 64;
 
 // ---- derived plate size ----
-plate_w = ORALB_PEG_D_BACK + 2 * plate_padding;
+plate_w = ORALB_PEG_W_BACK + 2 * plate_padding;
 plate_d = ORALB_PEG_LENGTH + 2 * plate_padding;
 
 module test_piece() {

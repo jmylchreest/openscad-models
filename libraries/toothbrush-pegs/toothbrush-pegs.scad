@@ -24,10 +24,10 @@
 // is exposed below — because the brush's recess never changes between
 // handles. Edit these constants if your handle disagrees; the test
 // piece picks up the new sizes automatically.
-ORALB_PEG_W_BACK    = 8.4;   // width at the back (charging-side) end
+ORALB_PEG_W_BACK    = 8.2;   // width at the back (charging-side) end
 ORALB_PEG_W_FRONT   = 6.5;   // width at the front (bristle-side) end
 ORALB_PEG_LENGTH    = 9.3;   // back end → front end along the long axis
-ORALB_PEG_CORNER_R  = 2.0;   // rounding radius applied at every corner
+ORALB_PEG_CORNER_R  = 4.0;   // rounding radius applied at every corner
 ORALB_PEG_HEIGHT    = 5.0;   // vertical peg height (≤ ~12.5 mm recess depth)
 ORALB_PEG_DEPTH_MAX = 12.5;  // brush's recess depth — keep ORALB_PEG_HEIGHT under this
 
