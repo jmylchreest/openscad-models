@@ -49,7 +49,10 @@ render_target = "all";  // [caddy, feet, all, assembled]
 //   Sparse — keep the layout, blank some cells with "solid":
 //     slot_rows = [["body",  "solid", "body"],
 //                  ["solid", "body",  "solid"]];
-slot_rows = [["body", "toothpaste", "body"], ["toothpaste", "body"]];
+slot_rows = [
+["body", "toothpaste", "body"],
+["head", "toothpaste", "head"]
+];
 
 /* [Caddy frame — the stadium-prism block] */
 // caddy_w and caddy_d are 0 by default — sized automatically from the
@@ -60,9 +63,9 @@ slot_rows = [["body", "toothpaste", "body"], ["toothpaste", "body"]];
 //   auto depth = (num_rows − 1) · slot_spacing_y + max_hole_d + 28
 caddy_w   = 0;    // X — 0 = auto-derived from slot layout
 caddy_h   = 55;   // Z — short axis of the stadium (visible height)
-caddy_d   = 0;    // Y — 0 = auto-derived from slot layout
-corner_r  = 27;   // outer corner radius in XZ (caddy_h/2 = full oval)
-wall_t    = 6;    // uniform thickness of the ring's top/bottom/end-cap walls
+caddy_d   = 80;    // Y — 0 = auto-derived from slot layout
+corner_r  = 25;   // outer corner radius in XZ (caddy_h/2 = full oval)
+wall_t    = 5;    // uniform thickness of the ring's top/bottom/end-cap walls
 
 /* [Body slot — Oral-B brush body] */
 // Bodies are ~28 mm — 30 mm hole gives ~1 mm clearance per side. The
@@ -80,12 +83,18 @@ body_peg_chamfer_h  = 0.5;    // vertical height of the chamfer (45° at 0.5/0.5
 
 /* [Head slot — Oral-B replacement brush head] */
 // Heads have a hollow shaft ~5 mm Ø; a 4 mm peg gives a snug fit. Top
-// hole sized for the head's body so the bristles sit just above the
-// caddy with the shaft engaged on the peg from below.
+// hole sized for the head's body so the bristles sit above the caddy
+// with the shaft engaged on the peg from below.
+//
+// head_peg_h is auto-derived from the caddy when set to 0: the peg's
+// top sits 5 mm below caddy_h, so the head's ~18 mm hollow shaft can
+// engage the top of the peg with the rest of the body standing above
+// the caddy.
+//   auto height = caddy_h − wall_t − 5
 head_hole_d   = 14;
 head_through  = false;
 head_peg_d    = 4.0;
-head_peg_h    = 25;     // long — fills the head's hollow shaft
+head_peg_h    = 0;     // 0 = auto: peg top 5 mm below caddy_h
 
 /* [Toothpaste slot] */
 // Tube enters through the top hole and rests on the bottom strip.
@@ -97,8 +106,8 @@ toothpaste_peg_d    = 0;
 toothpaste_peg_h    = 0;
 
 /* [Slot positions] */
-slot_spacing_x = 55;  // distance between slot centres along X
-slot_spacing_y = 30;  // distance between rows along Y (matters for ≥2 rows)
+slot_spacing_x = 35;  // distance between slot centres along X
+slot_spacing_y = 35;  // distance between rows along Y (matters for ≥2 rows)
 // How a short row aligns under the longest one. With slot_rows =
 // [["x","x","x"], ["x","x"]] and row_align = "center", the front 2
 // slots sit offset between the back 3 (default). "left" aligns the
@@ -174,8 +183,14 @@ function _round_peg_d(t)  =
     : t == "toothpaste" ? toothpaste_peg_d
     :                     0;
 
+// Head peg height: user-set when head_peg_h > 0, otherwise derived from
+// the caddy so the peg's top sits 5 mm below caddy_h (leaves the head
+// body well above the caddy when 18 mm of the shaft engages the top).
+function _head_peg_h() =
+    head_peg_h > 0 ? head_peg_h : max(1, caddy_h - wall_t - 5);
+
 function _round_peg_h(t)  =
-      t == "head"       ? head_peg_h
+      t == "head"       ? _head_peg_h()
     : t == "toothpaste" ? toothpaste_peg_h
     :                     0;
 
