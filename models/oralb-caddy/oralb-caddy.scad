@@ -127,18 +127,15 @@ feet_rim_t            = 0.0;  // flange flaring out around the recess
 
 /* [Foot ↔ caddy joint] */
 // Caddy bottom carries four cylindrical sockets, each with a small
-// rectangular keying notch. The notches on the caddy ALL point in the
-// same direction (`feet_socket_notch_angle`, default 90° = +Y = toward
-// the back of the caddy) so the keying is a consistent "this side
-// faces back" indicator. Each printed foot carries its notch at a
-// per-corner offset so that, when the foot rotates to its installed
-// angle, its notch lands on the back-facing socket slot.
+// rectangular keying notch. Notches point OUTWARD along X by default —
+// left sockets carry their slot on the −X side, right sockets on +X —
+// so the keying also encodes the splay axis: drop a foot in with its
+// notch in the slot and it's already rotated to splay outward.
 feet_socket_h            = 3;    // socket depth (foot insertion length)
 feet_socket_clear        = 0.5;  // total Ø clearance — socket Ø = feet_top_d + this
 feet_notch_w             = 1.5;  // tangential width of the notch
 feet_notch_d             = 1.0;  // radial depth (how far the notch protrudes)
 feet_notch_clear         = 0.4;  // extra clearance around the socket-side slot
-feet_socket_notch_angle  = 90;   // world angle for every socket's notch slot
 
 /* [Foot layout] */
 // Four feet sit at the four corners of the caddy's *flat* bottom strip
@@ -305,17 +302,29 @@ module _slot_subtractions() {
         }
 }
 
-// Cylindrical socket + rectangular notch slot, at one corner. All four
-// sockets share the same notch direction (`feet_socket_notch_angle`),
-// so the bottom of the caddy reads consistently regardless of how the
-// feet are rotated when installed.
+// Notch direction for each socket: by default the notch faces OUTWARD
+// in X (right sockets carry their notch on +X, left sockets on −X), so
+// the keying ALSO encodes the splay axis — once the foot is dropped
+// into a socket with its notch in the slot, the foot is rotated to
+// splay outward along X with no extra setup. Override via the
+// per-side angles below if you want a different convention.
+feet_socket_notch_angle_right = 0;    // +X direction (world)
+feet_socket_notch_angle_left  = 180;  // −X direction (world)
+
+function _socket_notch_angle(x_sign) =
+    x_sign > 0 ? feet_socket_notch_angle_right
+               : feet_socket_notch_angle_left;
+
+// Cylindrical socket + rectangular notch slot, at one corner. Each
+// socket's notch points outward in X (see _socket_notch_angle) so the
+// foot's splay axis is implicit in the joint.
 module _socket(x_sign, y_sign) {
     p = _foot_xy(x_sign, y_sign);
     cavity_d = feet_top_d + feet_socket_clear;
     slot_w   = feet_notch_w + feet_notch_clear;
     slot_d   = feet_notch_d + feet_notch_clear / 2;
     translate([p[0], p[1], -0.01])
-        rotate([0, 0, feet_socket_notch_angle])
+        rotate([0, 0, _socket_notch_angle(x_sign)])
             union() {
                 cylinder(d = cavity_d, h = feet_socket_h + 0.01);
                 translate([cavity_d / 2 - 0.5, -slot_w / 2, 0])
@@ -435,13 +444,14 @@ module feet_for_print() {
     spacing  = max(feet_top_d + feet_notch_d, flange_d) + 4;
     D = feet_rotation_delta;
     A = feet_angle;
-    rots  = [-D, +D, 180 - D, 180 + D];  // BL, BR, FL, FR
-    tilts = [+A, -A, +A,      -A];        // matching splay per corner
+    xsigns = [-1, +1, -1, +1];            // BL, BR, FL, FR
+    rots   = [-D, +D, 180 - D, 180 + D];
+    tilts  = [+A, -A, +A,      -A];
     for (i = [0 : 3])
         translate([(i - 1.5) * spacing, 0, feet_h])
             rotate([180, 0, 0])
                 foot_solo(
-                    notch_offset = feet_socket_notch_angle - rots[i],
+                    notch_offset = _socket_notch_angle(xsigns[i]) - rots[i],
                     bottom_angle = -tilts[i]
                 );
 }
@@ -458,7 +468,7 @@ module _foot_at_corner(x_sign, y_sign, tilt, rot) {
             rotate([0, tilt, 0])
                 translate([0, 0, feet_socket_h - feet_h])
                     foot_solo(
-                        notch_offset = feet_socket_notch_angle - rot,
+                        notch_offset = _socket_notch_angle(x_sign) - rot,
                         bottom_angle = -tilt
                     );
 }
