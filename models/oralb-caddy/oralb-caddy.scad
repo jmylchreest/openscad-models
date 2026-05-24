@@ -141,16 +141,14 @@ feet_notch_clear         = 0.4;  // extra clearance around the socket-side slot
 // Four feet sit at the four corners of the caddy's *flat* bottom strip
 // (|X| ≤ caddy_w/2 − corner_r). `feet_inset_x` is measured inward from
 // the flat strip's X edge; `feet_inset_y` inward from the prism's Y edge.
-//   Foot 1 (back-left,  −X, +Y): tilt = +A,  rotation = −Δ
-//   Foot 2 (back-right, +X, +Y): tilt = −A,  rotation = +Δ
-//   Foot 3 (front-left, −X, −Y): tilt = +A,  rotation = 180 − Δ
-//   Foot 4 (front-right,+X, −Y): tilt = −A,  rotation = 180 + Δ
-// (Angle = 0 makes rotation visually irrelevant for the round body,
-//  but the notch still keys it.)
+// Each foot is rotated so its notch points radially OUTWARD from the
+// caddy centre (BL → NW, BR → NE, FL → SW, FR → SE) and then tilted
+// by `feet_angle` in that same outward direction, giving a diagonal
+// splay. The same `feet_angle` also shears the foot's bottom so the
+// cone sits flat on the counter after the tilt.
 feet_inset_x          = 8;    // inward from the flat strip's X edge
 feet_inset_y          = 12;   // inward from the prism's Y edge
-feet_angle            = 10;    // tilt magnitude in degrees (try 15–20 for splay)
-feet_rotation_delta   = 0;    // Z-rotation delta per spec
+feet_angle            = 10;   // tilt magnitude in degrees (try 15–20 for splay)
 
 /* [Quality] */
 $fa = $preview ? $fa : 1;
@@ -302,29 +300,21 @@ module _slot_subtractions() {
         }
 }
 
-// Notch direction for each socket: by default the notch faces OUTWARD
-// in X (right sockets carry their notch on +X, left sockets on −X), so
-// the keying ALSO encodes the splay axis — once the foot is dropped
-// into a socket with its notch in the slot, the foot is rotated to
-// splay outward along X with no extra setup. Override via the
-// per-side angles below if you want a different convention.
-feet_socket_notch_angle_right = 0;    // +X direction (world)
-feet_socket_notch_angle_left  = 180;  // −X direction (world)
+// Each socket's notch points RADIALLY OUTWARD from the caddy centre —
+// BL → NW, BR → NE, FL → SW, FR → SE. The keying then encodes the
+// splay axis itself: once a foot drops into its socket with the notch
+// in the slot, the foot is already rotated to splay diagonally outward.
+function _socket_notch_angle(x_sign, y_sign) = atan2(y_sign, x_sign);
 
-function _socket_notch_angle(x_sign) =
-    x_sign > 0 ? feet_socket_notch_angle_right
-               : feet_socket_notch_angle_left;
-
-// Cylindrical socket + rectangular notch slot, at one corner. Each
-// socket's notch points outward in X (see _socket_notch_angle) so the
-// foot's splay axis is implicit in the joint.
+// Cylindrical socket + rectangular notch slot, at one corner. Notch
+// direction comes from _socket_notch_angle (radial outward).
 module _socket(x_sign, y_sign) {
     p = _foot_xy(x_sign, y_sign);
     cavity_d = feet_top_d + feet_socket_clear;
     slot_w   = feet_notch_w + feet_notch_clear;
     slot_d   = feet_notch_d + feet_notch_clear / 2;
     translate([p[0], p[1], -0.01])
-        rotate([0, 0, _socket_notch_angle(x_sign)])
+        rotate([0, 0, _socket_notch_angle(x_sign, y_sign)])
             union() {
                 cylinder(d = cavity_d, h = feet_socket_h + 0.01);
                 translate([cavity_d / 2 - 0.5, -slot_w / 2, 0])
@@ -442,18 +432,15 @@ module _foot_solo_body(notch_offset) {
 module feet_for_print() {
     flange_d = feet_bottom_d + 2 * feet_rim_t;
     spacing  = max(feet_top_d + feet_notch_d, flange_d) + 4;
-    D = feet_rotation_delta;
     A = feet_angle;
-    xsigns = [-1, +1, -1, +1];            // BL, BR, FL, FR
-    rots   = [-D, +D, 180 - D, 180 + D];
-    tilts  = [+A, -A, +A,      -A];
+    // With radial-outward sockets, every foot is identical: notch at
+    // foot-local +X (the default), bottom sheared by −A so the cone
+    // sits flat on the counter after splay. Print 4 copies, rotate
+    // each one to align its notch with the slot at its corner.
     for (i = [0 : 3])
         translate([(i - 1.5) * spacing, 0, feet_h])
             rotate([180, 0, 0])
-                foot_solo(
-                    notch_offset = _socket_notch_angle(xsigns[i]) - rots[i],
-                    bottom_angle = -tilts[i]
-                );
+                foot_solo(notch_offset = 0, bottom_angle = -A);
 }
 
 // Place one foot under a corner of the caddy, tilted by `tilt` around
@@ -461,26 +448,30 @@ module feet_for_print() {
 // inserts into the caddy socket at Z = 0..feet_socket_h. The notch
 // offset is chosen so the notch lands at the caddy's fixed socket
 // notch direction after the foot's own rotation.
-module _foot_at_corner(x_sign, y_sign, tilt, rot) {
-    p = _foot_xy(x_sign, y_sign);
+module _foot_at_corner(x_sign, y_sign, tilt) {
+    p   = _foot_xy(x_sign, y_sign);
+    rot = _socket_notch_angle(x_sign, y_sign);   // radial-outward
     translate([p[0], p[1], 0])
         rotate([0, 0, rot])
             rotate([0, tilt, 0])
                 translate([0, 0, feet_socket_h - feet_h])
                     foot_solo(
-                        notch_offset = _socket_notch_angle(x_sign) - rot,
+                        notch_offset = 0,        // foot's notch at +X local
                         bottom_angle = -tilt
                     );
 }
 
-// All four feet at the splayed positions (visualisation only).
+// All four feet at the splayed positions (visualisation only). With
+// radial-outward sockets, every foot is rotated to point at its
+// corner's outward direction, then tilted by +feet_angle around its
+// own local Y axis — so the splay goes diagonally outward from the
+// caddy centre.
 module feet_assembled() {
     A = feet_angle;
-    D = feet_rotation_delta;
-    _foot_at_corner(-1, +1, +A,       -D);  // BL
-    _foot_at_corner(+1, +1, -A,       +D);  // BR
-    _foot_at_corner(-1, -1, +A, 180 - D);   // FL
-    _foot_at_corner(+1, -1, -A, 180 + D);   // FR
+    _foot_at_corner(-1, +1, A);  // BL → NW
+    _foot_at_corner(+1, +1, A);  // BR → NE
+    _foot_at_corner(-1, -1, A);  // FL → SW
+    _foot_at_corner(+1, -1, A);  // FR → SE
 }
 
 // Caddy in PRINT orientation: rotate 90° on X so the open front face
