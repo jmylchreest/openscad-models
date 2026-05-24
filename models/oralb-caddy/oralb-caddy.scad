@@ -26,7 +26,7 @@ use <../../libraries/toothbrush-pegs/toothbrush-pegs.scad>
 /* [Output] */
 // `all` shows the caddy + four feet on a virtual plate.
 // `assembled` shows the caddy with the feet inserted (visualisation).
-render_target = "all";  // [caddy, feet, all, assembled]
+render_target = "feet";  // [caddy, feet, all, assembled]
 
 /* [Layout] */
 // Each inner list is one row of slots, arranged front-to-back along Y.
@@ -50,8 +50,7 @@ render_target = "all";  // [caddy, feet, all, assembled]
 //     slot_rows = [["body",  "solid", "body"],
 //                  ["solid", "body",  "solid"]];
 slot_rows = [
-["body", "toothpaste", "body"],
-["head", "toothpaste", "head"]
+["body", "toothpaste", "toothpaste", "body"]
 ];
 
 /* [Caddy frame — the stadium-prism block] */
@@ -63,7 +62,7 @@ slot_rows = [
 //   auto depth = (num_rows − 1) · slot_spacing_y + max_hole_d + 28
 caddy_w   = 0;    // X — 0 = auto-derived from slot layout
 caddy_h   = 55;   // Z — short axis of the stadium (visible height)
-caddy_d   = 80;    // Y — 0 = auto-derived from slot layout
+caddy_d   = 65;    // Y — 0 = auto-derived from slot layout
 corner_r  = 25;   // outer corner radius in XZ (caddy_h/2 = full oval)
 wall_t    = 5;    // uniform thickness of the ring's top/bottom/end-cap walls
 
@@ -74,7 +73,7 @@ wall_t    = 5;    // uniform thickness of the ring's top/bottom/end-cap walls
 // Peg shape, size and height are fixed in libraries/toothbrush-pegs;
 // only the slide-fit tolerance is exposed here (use oralb-peg-test/
 // to dial it in).
-body_hole_d         = 30;
+body_hole_d         = 35;
 body_through        = false;  // true = also punch the bottom strip (pass-through)
 body_peg_tolerance  = 0.3;    // total XY clearance — subtracted from each dimension
 body_peg_taper      = 2.0;    // total XY shrinkage from peg base to top of main body
@@ -91,7 +90,7 @@ body_peg_chamfer_h  = 0.5;    // vertical height of the chamfer (45° at 0.5/0.5
 // engage the top of the peg with the rest of the body standing above
 // the caddy.
 //   auto height = caddy_h − wall_t − 5
-head_hole_d   = 14;
+head_hole_d   = 13;
 head_through  = false;
 head_peg_d    = 4.0;
 head_peg_h    = 0;     // 0 = auto: peg top 5 mm below caddy_h
@@ -100,13 +99,13 @@ head_peg_h    = 0;     // 0 = auto: peg top 5 mm below caddy_h
 // Tube enters through the top hole and rests on the bottom strip.
 // Set toothpaste_through = true if you'd rather the tube cap hangs out
 // the bottom (resting on the counter).
-toothpaste_hole_d   = 32;
+toothpaste_hole_d   = 50;
 toothpaste_through  = false;
 toothpaste_peg_d    = 0;
 toothpaste_peg_h    = 0;
 
 /* [Slot positions] */
-slot_spacing_x = 35;  // distance between slot centres along X
+slot_spacing_x = 55;  // distance between slot centres along X
 slot_spacing_y = 35;  // distance between rows along Y (matters for ≥2 rows)
 // How a short row aligns under the longest one. With slot_rows =
 // [["x","x","x"], ["x","x"]] and row_align = "center", the front 2
@@ -119,12 +118,12 @@ row_align      = "center";  // [center, left, right]
 // Each foot is a truncated cone, narrow at the bottom and wide at the
 // top. The top half plugs into a socket on the caddy bottom. The
 // bottom has a rim around a recess sized for a stick-on rubber foot.
-feet_top_d            = 9;    // wide end (plugs into the caddy)
-feet_bottom_d         = 5.5;  // narrow end (rests on the counter)
+feet_top_d            = 11;    // wide end (plugs into the caddy)
+feet_bottom_d         = 8.2;  // narrow end (rests on the counter)
 feet_h                = 17;   // overall height of the foot
-feet_recess_d         = 5;    // adhesive rubber foot diameter
+feet_recess_d         = 7.8;    // adhesive rubber foot diameter
 feet_recess_h         = 0.2;  // recess depth (≈ adhesive thickness)
-feet_rim_t            = 0.4;  // flange flaring out around the recess
+feet_rim_t            = 0.0;  // flange flaring out around the recess
 
 /* [Foot ↔ caddy joint] */
 // Caddy bottom carries four cylindrical sockets, each with a small
