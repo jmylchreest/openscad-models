@@ -26,7 +26,7 @@ use <../../libraries/toothbrush-pegs/toothbrush-pegs.scad>
 /* [Output] */
 // `all` shows the caddy + four feet on a virtual plate.
 // `assembled` shows the caddy with the feet inserted (visualisation).
-render_target = "feet";  // [caddy, feet, all, assembled]
+render_target = "assembled";  // [caddy, feet, all, assembled]
 
 /* [Layout] */
 // Each inner list is one row of slots, arranged front-to-back along Y.
@@ -61,9 +61,9 @@ slot_rows = [
 //   auto width = (max_cols − 1) · slot_spacing_x + 2·(corner_r + 4)
 //   auto depth = (num_rows − 1) · slot_spacing_y + max_hole_d + 28
 caddy_w   = 0;    // X — 0 = auto-derived from slot layout
-caddy_h   = 55;   // Z — short axis of the stadium (visible height)
-caddy_d   = 65;    // Y — 0 = auto-derived from slot layout
-corner_r  = 25;   // outer corner radius in XZ (caddy_h/2 = full oval)
+caddy_h   = 66;   // Z — short axis of the stadium (visible height)
+caddy_d   = 55;    // Y — 0 = auto-derived from slot layout
+corner_r  = 33;   // outer corner radius in XZ (caddy_h/2 = full oval)
 wall_t    = 5;    // uniform thickness of the ring's top/bottom/end-cap walls
 
 /* [Body slot — Oral-B brush body] */
@@ -73,7 +73,7 @@ wall_t    = 5;    // uniform thickness of the ring's top/bottom/end-cap walls
 // Peg shape, size and height are fixed in libraries/toothbrush-pegs;
 // only the slide-fit tolerance is exposed here (use oralb-peg-test/
 // to dial it in).
-body_hole_d         = 35;
+body_hole_d         = 32;
 body_through        = false;  // true = also punch the bottom strip (pass-through)
 body_peg_tolerance  = 0.3;    // total XY clearance — subtracted from each dimension
 body_peg_taper      = 2.0;    // total XY shrinkage from peg base to top of main body
@@ -99,13 +99,13 @@ head_peg_h    = 0;     // 0 = auto: peg top 5 mm below caddy_h
 // Tube enters through the top hole and rests on the bottom strip.
 // Set toothpaste_through = true if you'd rather the tube cap hangs out
 // the bottom (resting on the counter).
-toothpaste_hole_d   = 50;
+toothpaste_hole_d   = 45;
 toothpaste_through  = false;
 toothpaste_peg_d    = 0;
 toothpaste_peg_h    = 0;
 
 /* [Slot positions] */
-slot_spacing_x = 55;  // distance between slot centres along X
+slot_spacing_x = 50;  // distance between slot centres along X
 slot_spacing_y = 35;  // distance between rows along Y (matters for ≥2 rows)
 // How a short row aligns under the longest one. With slot_rows =
 // [["x","x","x"], ["x","x"]] and row_align = "center", the front 2
@@ -152,7 +152,7 @@ feet_socket_notch_angle  = 90;   // world angle for every socket's notch slot
 //  but the notch still keys it.)
 feet_inset_x          = 8;    // inward from the flat strip's X edge
 feet_inset_y          = 12;   // inward from the prism's Y edge
-feet_angle            = 0;    // tilt magnitude in degrees (try 15–20 for splay)
+feet_angle            = 10;    // tilt magnitude in degrees (try 15–20 for splay)
 feet_rotation_delta   = 0;    // Z-rotation delta per spec
 
 /* [Quality] */
@@ -378,11 +378,26 @@ module caddy() {
 
 // One foot — truncated cone + flange + adhesive recess + keying notch
 // on the top side. The notch sits at `notch_offset` degrees around the
-// foot's vertical axis (default 0 = foot-local +X). At assembly time
-// each foot gets its own offset so that, after the foot rotates by R
-// to land at its corner, the notch ends up pointing at the caddy's
-// fixed `feet_socket_notch_angle` direction.
-module foot_solo(notch_offset = 0) {
+// foot's vertical axis (default 0 = foot-local +X). `bottom_angle`
+// shears the BOTTOM face of the foot around the foot's local Y axis,
+// so that when the foot is installed tilted by `−bottom_angle` around
+// the same axis, its bottom ends up parallel to the ground.
+module foot_solo(notch_offset = 0, bottom_angle = 0) {
+    difference() {
+        _foot_solo_body(notch_offset);
+        // Slanted half-space that cuts the foot's bottom at the
+        // requested angle around the foot's local Y axis. The cube
+        // sits below z = 0 in its own frame; rotating it by
+        // `bottom_angle` around Y tilts its top face so the cut plane
+        // becomes z = x · tan(bottom_angle) in foot-local coords.
+        if (bottom_angle != 0)
+            rotate([0, bottom_angle, 0])
+                translate([0, 0, -50])
+                    cube([200, 200, 100], center = true);
+    }
+}
+
+module _foot_solo_body(notch_offset) {
     flange_d = feet_bottom_d + 2 * feet_rim_t;
     union() {
         difference() {
@@ -419,11 +434,16 @@ module feet_for_print() {
     flange_d = feet_bottom_d + 2 * feet_rim_t;
     spacing  = max(feet_top_d + feet_notch_d, flange_d) + 4;
     D = feet_rotation_delta;
-    rots = [-D, +D, 180 - D, 180 + D];  // BL, BR, FL, FR
+    A = feet_angle;
+    rots  = [-D, +D, 180 - D, 180 + D];  // BL, BR, FL, FR
+    tilts = [+A, -A, +A,      -A];        // matching splay per corner
     for (i = [0 : 3])
         translate([(i - 1.5) * spacing, 0, feet_h])
             rotate([180, 0, 0])
-                foot_solo(feet_socket_notch_angle - rots[i]);
+                foot_solo(
+                    notch_offset = feet_socket_notch_angle - rots[i],
+                    bottom_angle = -tilts[i]
+                );
 }
 
 // Place one foot under a corner of the caddy, tilted by `tilt` around
@@ -437,7 +457,10 @@ module _foot_at_corner(x_sign, y_sign, tilt, rot) {
         rotate([0, 0, rot])
             rotate([0, tilt, 0])
                 translate([0, 0, feet_socket_h - feet_h])
-                    foot_solo(feet_socket_notch_angle - rot);
+                    foot_solo(
+                        notch_offset = feet_socket_notch_angle - rot,
+                        bottom_angle = -tilt
+                    );
 }
 
 // All four feet at the splayed positions (visualisation only).
