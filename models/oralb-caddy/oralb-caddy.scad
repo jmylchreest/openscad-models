@@ -119,7 +119,7 @@ row_align      = "center";  // [center, left, right]
 // top. The top half plugs into a socket on the caddy bottom. The
 // bottom has a rim around a recess sized for a stick-on rubber foot.
 feet_top_d            = 11;    // wide end (plugs into the caddy)
-feet_bottom_d         = 8.2;  // narrow end (rests on the counter)
+feet_bottom_d         = 10;  // narrow end (rests on the counter)
 feet_h                = 17;   // overall height of the foot
 feet_recess_d         = 7.8;    // adhesive rubber foot diameter
 feet_recess_h         = 0.2;  // recess depth (≈ adhesive thickness)
@@ -410,14 +410,20 @@ module foot_solo(notch_offset = 0) {
 // notch position that lets it install at one specific corner — the
 // notches point in four different directions on the bed but all end up
 // pointing the same way (toward the caddy's back) once installed.
+//
+// Feet print UPSIDE DOWN (wide caddy-facing end on the bed). Each
+// successive layer is the same width or smaller than the one below
+// it, so the cone tapers cleanly to the narrow end with no overhangs
+// and the rubber-foot recess opens upward — no supports needed.
 module feet_for_print() {
     flange_d = feet_bottom_d + 2 * feet_rim_t;
     spacing  = max(feet_top_d + feet_notch_d, flange_d) + 4;
     D = feet_rotation_delta;
     rots = [-D, +D, 180 - D, 180 + D];  // BL, BR, FL, FR
     for (i = [0 : 3])
-        translate([(i - 1.5) * spacing, 0, 0])
-            foot_solo(feet_socket_notch_angle - rots[i]);
+        translate([(i - 1.5) * spacing, 0, feet_h])
+            rotate([180, 0, 0])
+                foot_solo(feet_socket_notch_angle - rots[i]);
 }
 
 // Place one foot under a corner of the caddy, tilted by `tilt` around
@@ -444,13 +450,26 @@ module feet_assembled() {
     _foot_at_corner(+1, -1, -A, 180 + D);   // FR
 }
 
+// Caddy in PRINT orientation: rotate 90° on X so the open front face
+// sits on the bed and the stadium-ring cross-section runs straight up.
+// Slot tunnels become horizontal (≤ ~35 mm — slicer-bridgeable
+// without supports) and the head pegs become near-horizontal posts
+// instead of tall vertical pillars. The `assembled` target keeps the
+// USE orientation so the visualisation matches how the caddy sits on
+// the counter.
+module caddy_for_print() {
+    translate([0, 0, _caddy_d / 2])
+        rotate([90, 0, 0])
+            caddy();
+}
+
 // ---- output ----
 if (render_target == "caddy") {
-    caddy();
+    caddy_for_print();
 } else if (render_target == "feet") {
     feet_for_print();
 } else if (render_target == "all") {
-    caddy();
+    caddy_for_print();
     translate([-_caddy_w / 2 - 30, 0, 0])
         feet_for_print();
 } else if (render_target == "assembled") {
