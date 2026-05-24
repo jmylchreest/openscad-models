@@ -118,11 +118,11 @@ row_align      = "center";  // [center, left, right]
 // Each foot is a truncated cone, narrow at the bottom and wide at the
 // top. The top half plugs into a socket on the caddy bottom. The
 // bottom has a rim around a recess sized for a stick-on rubber foot.
-feet_top_d            = 11;    // wide end (plugs into the caddy)
+feet_top_d            = 14;    // wide end (plugs into the caddy)
 feet_bottom_d         = 10;  // narrow end (rests on the counter)
-feet_h                = 17;   // overall height of the foot
+feet_h                = 18;   // overall height of the foot
 feet_recess_d         = 7.8;    // adhesive rubber foot diameter
-feet_recess_h         = 0.2;  // recess depth (≈ adhesive thickness)
+feet_recess_h         = 0.4;  // recess depth (≈ adhesive thickness)
 feet_rim_t            = 0.0;  // flange flaring out around the recess
 
 /* [Foot ↔ caddy joint] */
