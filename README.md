@@ -15,6 +15,7 @@ Parametric OpenSCAD models and the libraries I wrote to support them.
 
 | Model | What it is |
 |---|---|
+| [washing-line-prop](./models/washing-line-prop/) | PETG replacement line hoop for a square metal prop: default 17 mm bore, solid plug, adjustable crush ribs, reinforced neck and adjustable side entry. Includes a plug-only fit test. |
 | [skadis-container](./models/skadis-container/) | Wall-mountable parametric pegboard container with per-face styles (solid / hex / grid), parametric peg layout, tapered standoff bracket, and three drop-in inserts (pens, USB-A/C, rectangular compartments). |
 | [skadis-mug-holder](./models/skadis-mug-holder/) | Open-front pegboard mug holder — back pegs, front handle slot, configurable per-side panel style. |
 | [modular-clip-remote-holder](./models/modular-clip-remote-holder/) | Spring clip onto any thin edge + a slim cradle that holds a remote (default 34 × 7.5 mm). Cradle slides onto the clip via the [modular-clip](./libraries/modular-clip.md) dovetail. |
@@ -34,6 +35,13 @@ Each model / test-print directory follows the same layout:
   preview/        previews + renders (.png)
   exports/        sliceable outputs (.stl / .3mf)
 ```
+
+## Export with print settings
+
+To export models with embedded printer and process settings, use
+[`scripts/export-3mf.py`](./scripts/README.md). It reads an optional per-model
+`3mf-settings.json`; otherwise defaults to 2 walls, 15% gyroid and automatic tree
+supports. Every project is reopened and slice-checked before it is saved.
 
 ## Third-party libraries
 
